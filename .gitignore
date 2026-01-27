@@ -1,0 +1,36 @@
+# Django #
+logs/
+*.log
+*.pot
+*.pyc
+__pycache__/
+media/
+
+
+# Backup files #
+*.bak
+
+# Python #
+*.py[cod]
+*$py.class
+
+
+# Environment variable settings
+env
+venv/
+
+# Pipfile
+Pipfile.lock
+
+# Pycharm settings #
+.idea/
+
+# Misc Files #
+*.Copy.html
+
+# Distribution / packaging
+.Python
+build/
+*.egg-info/
+
+
