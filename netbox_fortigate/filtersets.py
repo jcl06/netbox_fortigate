@@ -11,7 +11,8 @@ __all__ = (
     "FortiGateInterfaceFilterSet",
     "FortiGateZoneFilterSet",
     "FortiGateRouteFilterSet",
-    "FortiGateObjectFilterSet"
+    "FortiGateObjectFilterSet",
+    "FortiGateSchedulrFilterSet"
 )
 
 class FortiGateDeviceFilterSet(NetBoxModelFilterSet):
@@ -96,3 +97,11 @@ class FortiGateObjectFilterSet(NetBoxModelFilterSet):
 
 
 
+
+class FortiGateSchedulerFilterSet(NetBoxModelFilterSet):
+    enabled = django_filters.BooleanFilter()
+    frequency = django_filters.CharFilter()
+
+    class Meta:
+        model = FortiGateScheduler
+        fields = ("name", "enabled", "frequency")

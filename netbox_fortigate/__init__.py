@@ -10,5 +10,9 @@ class NetBoxFortigateConfig(PluginConfig):
     min_version = "4.1.3"
     max_version = "4.1.3"
 
+    def ready(self):
+        super().ready()
+        from . import signals # noqa
 
+        
 config = NetBoxFortigateConfig

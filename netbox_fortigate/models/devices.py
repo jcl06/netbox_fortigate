@@ -116,8 +116,8 @@ class FortiGateDevice(PrimaryModel):
             return str(getattr(ip, "ip", ip)) 
         return None
 
-    def get_absolute_url(self):
-        return reverse('netbox_fortigate:fortigatedevice', args=[self.pk])
+    # def get_absolute_url(self):
+    #     return reverse('netbox_fortigate:fortigatedevice', args=[self.pk])
 
 
 class FortiGateInterface(PrimaryModel):

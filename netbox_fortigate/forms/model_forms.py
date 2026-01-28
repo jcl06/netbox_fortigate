@@ -9,10 +9,13 @@ from ..models import *
 
 __all__ = (
  "FortiGateDeviceForm",
+ "FortiGateSchedulerForm"
 )
 
 class FortiGateDeviceForm(NetBoxModelForm):
-    device = forms.ModelChoiceField(queryset=Device.objects.all())
+    device = forms.ModelChoiceField(
+        queryset=Device.objects.all()
+    )
     role = forms.CharField(required=False)
     mgmt_ip = forms.ModelChoiceField(queryset=IPAddress.objects.all(), required=False)
 
@@ -37,6 +40,24 @@ class FortiGateDeviceForm(NetBoxModelForm):
 
 
 
+class FortiGateSchedulerForm(NetBoxModelForm):
+    class Meta:
+        model = FortiGateScheduler
+        fields = (
+            "name",
+            "enabled",
+            "frequency",
+            "time_of_day",
+            "weekday",
+            "day_of_month",
+            "tags",
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        # Model.clean() handles frequency-specific validation too
+        return cleaned
+    
 
 
 # class FortiGateInterfaceForm(NetBoxModelForm):

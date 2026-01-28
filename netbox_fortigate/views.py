@@ -1,10 +1,13 @@
 from django.http import HttpResponse
 from netbox.views import generic
-from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
+from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view, ObjectPermissionRequiredMixin
 
 from . import forms, tables, filtersets
 from .models import *
-
+from .jobs import FortiGateRunner
 
 
 
@@ -142,5 +145,56 @@ class FortiGatObjectBulkDeleteView(generic.BulkDeleteView):
     filterset = filtersets.FortiGateObjectFilterSet
     table = tables.FortiGateObjectTable
 
+
+
 def requests_placeholder(request):
     return HttpResponse("netbox_fortigate: OK (FortiGate requests placeholder)")
+
+
+
+class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
+    """
+    Enqueue an immediate run for a schedule.
+    """
+    def post(self, request, pk: int):
+        schedule = get_object_or_404(FortiGateScheduler, pk=pk)
+
+        FortiGateRunner.enqueue(
+            instance=schedule,
+            user=request.user,
+            schedule_id=schedule.pk,
+        )
+
+        messages.success(request, f"Enqueued run for schedule '{schedule.name}'.")
+        return redirect(schedule.get_absolute_url())
+    
+
+
+
+class FortiGateScheduleListView(generic.ObjectListView):
+    queryset = FortiGateScheduler.objects.all()
+    table = tables.FortiGateSchedulerTable
+    filterset = filtersets.FortiGateSchedulerFilterSet
+
+
+class FortiGateScheduleView(generic.ObjectView):
+    queryset = FortiGateScheduler.objects.all()
+
+    # Optional: show recent jobs on the detail page
+    def get_extra_context(self, request, instance):
+        jobs = FortiGateRunner.get_jobs(instance=instance).order_by("-created")[:20]
+        return {"jobs": jobs}
+
+
+class FortiGateScheduleAddView(generic.ObjectEditView):
+    queryset = FortiGateScheduler.objects.all()
+    form = forms.FortiGateSchedulerForm
+
+
+class FortiGateScheduleEditView(generic.ObjectEditView):
+    queryset = FortiGateScheduler.objects.all()
+    form = forms.FortiGateSchedulerForm
+
+
+class FortiGateScheduleDeleteView(generic.ObjectDeleteView):
+    queryset = FortiGateScheduler.objects.all()

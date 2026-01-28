@@ -34,6 +34,14 @@ urlpatterns = [
     path("objects/delete/", views.FortiGateObjectDeleteView.as_view(), name="fortigateobject_delete"),
     path('objects/<int:pk>/', include(get_model_urls('netbox_fortigate', 'fortigateobject'))),
 
+    # Scheduler
+    path("schedules/", views.FortiGateScheduleListView.as_view(), name="fortigatescheduler_list"),
+    path("schedules/add/", views.FortiGateScheduleAddView.as_view(), name="fortigatescheduler_add"),
+    path("schedules/<int:pk>/", views.FortiGateScheduleView.as_view(), name="fortigatescheduler"),
+    path("schedules/<int:pk>/edit/", views.FortiGateScheduleEditView.as_view(), name="fortigatescheduler_edit"),
+    path("schedules/<int:pk>/delete/", views.FortiGateScheduleDeleteView.as_view(), name="fortigatescheduler_delete"),
+    path("schedules/<int:pk>/run-now/", views.FortiGateScheduleRunNowView.as_view(), name="fortigatescheduler_run_now"),
+
     # Requests placeholder for now
     path("requests/", views.requests_placeholder, name="requests"),
 ]

@@ -62,6 +62,14 @@ request_menu_items = (
     ),
 )
 
+jobs_menu_items = (
+    PluginMenuItem(
+        link="plugins:netbox_fortigate:fortigatescheduler_list",
+        link_text=_("Schedules"),
+        permissions=["netbox_fortinet.view_fortigatescheduler"],
+    ),
+)
+
 
 
 menu = PluginMenu(
@@ -69,6 +77,7 @@ menu = PluginMenu(
     icon_class='mdi mdi-wall',
     groups=(
         (_("FortiGate"), menu_items),
+        (_("Jobs"), jobs_menu_items),
         (_("Request"), request_menu_items),
     ),
 )
