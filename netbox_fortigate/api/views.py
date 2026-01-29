@@ -35,3 +35,9 @@ class FortiGateRouteViewSet(NetBoxModelViewSet):
 #     queryset = models.FortiGateObject.objects.select_related("fortigate__device", "object_type").all()
 #     serializer_class = serializers.FortiGateObjectSerializer
 #     filterset_class =  filtersets.FortiGateObjectFilterSet
+
+
+class FortiGateSchedulerViewSet(NetBoxModelViewSet):
+    queryset = models.FortiGateScheduler.objects.all()
+    serializer_class = serializers.FortiGateSchedulerSerializer
+    filterset_class = filtersets.FortiGateSchedulerFilterSet

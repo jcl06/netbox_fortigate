@@ -10,7 +10,6 @@ __all__ = (
     "FortiGateInterfaceTable",
     "FortiGateZoneTable",
     "FortiGateRouteTable",
-    "FortiGateSchedulerTable"
 )
 
 class FortiGateDeviceTable(NetBoxTable):
@@ -98,35 +97,3 @@ class FortiGateRouteTable(NetBoxTable):
         )
 
 
-
-
-class FortiGateSchedulerTable(NetBoxTable):
-    name = tables.Column(linkify=True)
-    enabled = columns.BooleanColumn()
-    frequency = tables.Column()
-    time_of_day = tables.Column()
-    weekday = tables.Column()
-    day_of_month = tables.Column()
-
-    class Meta(NetBoxTable.Meta):
-        model = FortiGateScheduler
-        fields = (
-            "pk",
-            "id",
-            "name",
-            "enabled",
-            "frequency",
-            "time_of_day",
-            "weekday",
-            "day_of_month",
-            "tags",
-        )
-        default_columns = (
-            "name",
-            "enabled",
-            "frequency",
-            "time_of_day",
-            "weekday",
-            "day_of_month",
-            "tags",
-        )

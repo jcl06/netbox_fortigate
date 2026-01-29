@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 from utilities.urls import get_model_urls
-
+from .models import FortiGateScheduler
 from . import views
 
 app_name = "netbox_fortigate"
@@ -31,16 +31,19 @@ urlpatterns = [
 
     # Objects
     path("objects/", views.FortiGateObjectListView.as_view(), name="fortigateobject_list"),
-    path("objects/delete/", views.FortiGateObjectDeleteView.as_view(), name="fortigateobject_delete"),
+    path("objects/delete/", views.FortiGateObjectDeleteView.as_view(), name="fortigateobject_bulk_delete"),
     path('objects/<int:pk>/', include(get_model_urls('netbox_fortigate', 'fortigateobject'))),
 
     # Scheduler
     path("schedules/", views.FortiGateScheduleListView.as_view(), name="fortigatescheduler_list"),
-    path("schedules/add/", views.FortiGateScheduleAddView.as_view(), name="fortigatescheduler_add"),
-    path("schedules/<int:pk>/", views.FortiGateScheduleView.as_view(), name="fortigatescheduler"),
-    path("schedules/<int:pk>/edit/", views.FortiGateScheduleEditView.as_view(), name="fortigatescheduler_edit"),
-    path("schedules/<int:pk>/delete/", views.FortiGateScheduleDeleteView.as_view(), name="fortigatescheduler_delete"),
+    path("schedules/add/", views.FortiGateScheduleEditView.as_view(), name="fortigatescheduler_add"),
+    path("schedules/delete/", views.FortiGateScheduleBulkDeleteView.as_view(), name="fortigatescheduler_bulk_delete"),
+    path('schedules/<int:pk>/', include(get_model_urls('netbox_fortigate', 'fortigatescheduler'))),
     path("schedules/<int:pk>/run-now/", views.FortiGateScheduleRunNowView.as_view(), name="fortigatescheduler_run_now"),
+    path("schedules/<int:pk>/jobs/", views.FortiGateSchedulerJobsView.as_view(), {"model": FortiGateScheduler}, name="fortigatescheduler_jobs"),
+
+    path("devices/<int:pk>/pull-inventory/", views.FortiGateDevicePullInventoryView.as_view(), name="device_pull_inventory",),
+
 
     # Requests placeholder for now
     path("requests/", views.requests_placeholder, name="requests"),

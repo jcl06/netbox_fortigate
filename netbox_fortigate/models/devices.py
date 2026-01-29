@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from netbox.models import PrimaryModel
+from netbox.models import PrimaryModel, JobsMixin
 from ipam.fields import IPAddressField, IPNetworkField
 
 __all__ = (
@@ -37,7 +37,7 @@ def default_ssh_port() -> int:
     return _plugin_default("default_ssh_port", 22)
 
 
-class FortiGateDevice(PrimaryModel):
+class FortiGateDevice(PrimaryModel, JobsMixin):
     device = models.OneToOneField(
         to='dcim.Device',
         on_delete=models.PROTECT,

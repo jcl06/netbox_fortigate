@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from dcim.models import Device
 from ipam.models import IPAddress
@@ -6,6 +7,11 @@ from netbox.forms import NetBoxModelForm
 
 
 from ..models import *
+from ..choices import (
+    ScheduleModeChoices,
+    ScheduleFrequencyChoices,
+)
+
 
 __all__ = (
  "FortiGateDeviceForm",
@@ -39,105 +45,51 @@ class FortiGateDeviceForm(NetBoxModelForm):
     
 
 
-
-class FortiGateSchedulerForm(NetBoxModelForm):
+class FortiGateSchedulerForm(forms.ModelForm):
+    interval_minutes = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label=_("Interval"),
+        help_text=_("Used only for 'Every N minutes'. Example: 15 means run every 15 minutes."),
+    )
+    day_of_month = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=31,
+        label=_("Day of month"),
+        help_text=_("Required for monthly schedules (1-31). If a month is shorter, the job will run on the month's last day."),
+    )
     class Meta:
         model = FortiGateScheduler
         fields = (
             "name",
+            "description",
             "enabled",
+            "job_type",
+            "schedule_mode",
+            "interval_minutes",
             "frequency",
             "time_of_day",
             "weekday",
             "day_of_month",
-            "tags",
         )
+        
 
-    def clean(self):
-        cleaned = super().clean()
-        # Model.clean() handles frequency-specific validation too
-        return cleaned
-    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+        # Determine selection from POST first, else instance
+        mode = (self.data.get("schedule_mode") or getattr(self.instance, "schedule_mode", None) or ScheduleModeChoices.CRON)
+        freq = (self.data.get("frequency") or getattr(self.instance, "frequency", None))
 
-# class FortiGateInterfaceForm(NetBoxModelForm):
-#     fortigate = forms.ModelChoiceField(queryset=FortiGateDevice.objects.all())
-#     parent = forms.ModelChoiceField(queryset=FortiGateInterface.objects.none(), required=False)
+        # Always start from permissive requirements; enforce in clean()
+        self.fields["interval_minutes"].required = False
+        self.fields["frequency"].required = False
+        self.fields["time_of_day"].required = False
+        self.fields["weekday"].required = False
+        self.fields["day_of_month"].required = False
 
-#     class Meta:
-#         model = FortiGateInterface
-#         fields = (
-#             "fortigate",
-#             "name",
-#             "description",
-#             "tags",
-#             "enabled",
-#             "ip",
-#             "type",
-#             "role",
-#             "parent",
-#             "vdom",
-#             "status",
-#             "comments",
-#         )
-
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#         fg = None
-#         if getattr(self.instance, "pk", None):
-#             fg = self.instance.fortigate
-#         else:
-#             fg_id = self.data.get("fortigate")
-#             if fg_id:
-#                 try:
-#                     fg = FortiGateDevice.objects.get(pk=fg_id)
-#                 except FortiGateDevice.DoesNotExist:
-#                     fg = None
-
-#         if fg:
-#             self.fields["parent"].queryset = FortiGateInterface.objects.filter(fortigate=fg)
-#         else:
-#             self.fields["parent"].queryset = FortiGateInterface.objects.none()
-
-
-# class FortiGateZoneForm(NetBoxModelForm):
-#     fortigate = forms.ModelChoiceField(queryset=FortiGateDevice.objects.all())
-#     interface = forms.ModelMultipleChoiceField(queryset=FortiGateInterface.objects.none(), required=False)
-
-#     class Meta:
-#         model = FortiGateZone
-#         fields = (
-#             "fortigate",
-#             "name",
-#             "type",
-#             "intrazone",
-#             "interface",
-#             "description",
-#             "comments",
-#             "tags",
-#         )
-
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#         fg = None
-#         if getattr(self.instance, "pk", None):
-#             fg = self.instance.fortigate
-#         else:
-#             fg_id = self.data.get("fortigate")
-#             if fg_id:
-#                 try:
-#                     fg = FortiGateDevice.objects.get(pk=fg_id)
-#                 except FortiGateDevice.DoesNotExist:
-#                     fg = None
-
-#         if fg:
-#             self.fields["interface"].queryset = FortiGateInterface.objects.filter(fortigate=fg)
-#         else:
-#             self.fields["interface"].queryset = FortiGateInterface.objects.none()
-
-
-
-
+        # Make UI clearer (optional)
+        self.fields["interval_minutes"].widget.attrs.setdefault("placeholder", "e.g. 15")
+        self.fields["time_of_day"].widget.attrs.setdefault("placeholder", "HH:MM (24h), e.g. 01:00")
 

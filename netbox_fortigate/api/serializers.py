@@ -32,3 +32,9 @@ class FortiGateRouteSerializer(NetBoxModelSerializer):
 #     class Meta:
 #         model = FortiGateObject
 #         fields = "__all__"
+
+
+class FortiGateSchedulerSerializer(NetBoxModelSerializer):
+    class Meta:
+        model = FortiGateScheduler
+        fields = "__all__"

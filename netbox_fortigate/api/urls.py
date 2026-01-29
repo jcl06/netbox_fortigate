@@ -8,5 +8,6 @@ router.register("interfaces", FortiGateInterfaceViewSet)
 # router.register("zones", FortiGateZoneViewSet)
 router.register("routing-table", FortiGateRouteViewSet)
 # router.register("objects", FortiGateObjectViewSet)
+router.register("schedules", FortiGateSchedulerViewSet)
 
 urlpatterns = router.urls

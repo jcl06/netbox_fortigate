@@ -1,49 +1,98 @@
 {% extends 'generic/object.html' %}
 {% load helpers %}
+{% load i18n %}
 
-{% block controls %}
-  {{ block.super }}
-
-  {% if perms.netbox_fortinet.change_fortinetautomationschedule %}
-    <form method="post" action="{% url 'plugins:netbox_fortinet:schedule_run_now' pk=object.pk %}" class="d-inline">
+{# Add our button inside NetBox's standard controls wrapper #}
+{% block extra_controls %}
+  {% if perms.netbox_fortigate.change_fortigatescheduler %}
+    <form method="post"
+          action="{% url 'plugins:netbox_fortigate:fortigatescheduler_run_now' pk=object.pk %}"
+          class="d-inline">
       {% csrf_token %}
       <button type="submit" class="btn btn-primary">
-        Run now
+        {% trans "Run now" %}
       </button>
     </form>
   {% endif %}
-{% endblock controls %}
+{% endblock extra_controls %}
 
 {% block content %}
-  {{ block.super }}
+  <div class="row">
+    <div class="col col-md-6">
 
-  {% if jobs %}
-    <div class="card mt-3">
-      <div class="card-header">Recent jobs</div>
-      <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-          <thead>
+      <div class="card">
+        <h5 class="card-header">{% trans "Schedule" %}</h5>
+        <div class="card-body">
+          <table class="table table-hover attr-table">
             <tr>
-              <th>ID</th>
-              <th>Status</th>
-              <th>Scheduled</th>
-              <th>Started</th>
-              <th>Completed</th>
+              <th scope="row">{% trans "Name" %}</th>
+              <td>{{ object.name }}</td>
             </tr>
-          </thead>
-          <tbody>
-            {% for job in jobs %}
-              <tr>
-                <td>{{ job.id }}</td>
-                <td>{{ job.get_status_display }}</td>
-                <td>{{ job.scheduled|placeholder }}</td>
-                <td>{{ job.started|placeholder }}</td>
-                <td>{{ job.completed|placeholder }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+            <tr>
+              <th scope="row">{% trans "Enabled" %}</th>
+              <td>{% checkmark object.enabled %}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Job type" %}</th>
+              <td>{{ object.get_job_type_display|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Schedule mode" %}</th>
+              <td>{{ object.get_schedule_mode_display|placeholder }}</td>
+            </tr>
+          </table>
+        </div>
       </div>
+      <div class="card">
+        <h5 class="card-header">{% trans "Metadata" %}</h5>
+        <div class="card-body">
+          <table class="table table-hover attr-table">
+            <tr>
+              <th scope="row">{% trans "Description" %}</th>
+              <td>{{ object.description|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Created" %}</th>
+              <td>{{ object.created|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Last updated" %}</th>
+              <td>{{ object.last_updated|placeholder }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
     </div>
-  {% endif %}
+
+    <div class="col col-md-6">
+      <div class="card mt-3">
+        <h5 class="card-header">{% trans "Timing" %}</h5>
+        <div class="card-body">
+          <table class="table table-hover attr-table">
+            <tr>
+              <th scope="row">{% trans "Interval (minutes)" %}</th>
+              <td>{{ object.interval_minutes|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Frequency" %}</th>
+              <td>{{ object.get_frequency_display|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Time of day" %}</th>
+              <td>{{ object.time_of_day|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Weekday" %}</th>
+              <td>{{ object.get_weekday_display|placeholder }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Day of month" %}</th>
+              <td>{{ object.day_of_month|placeholder }}</td>
+            </tr>
+          </table>
+        </div>
+      </div>   
+    </div>
+  </div>
 {% endblock content %}

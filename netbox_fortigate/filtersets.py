@@ -98,10 +98,20 @@ class FortiGateObjectFilterSet(NetBoxModelFilterSet):
 
 
 
+
+
 class FortiGateSchedulerFilterSet(NetBoxModelFilterSet):
     enabled = django_filters.BooleanFilter()
+    job_type = django_filters.CharFilter()
+    schedule_mode = django_filters.CharFilter()
     frequency = django_filters.CharFilter()
 
     class Meta:
         model = FortiGateScheduler
-        fields = ("name", "enabled", "frequency")
+        fields = (
+            "name",
+            "enabled",
+            "job_type",
+            "schedule_mode",
+            "frequency"
+        )

@@ -66,7 +66,7 @@ jobs_menu_items = (
     PluginMenuItem(
         link="plugins:netbox_fortigate:fortigatescheduler_list",
         link_text=_("Schedules"),
-        permissions=["netbox_fortinet.view_fortigatescheduler"],
+        permissions=["netbox_fortigate.view_fortigatescheduler"],
     ),
 )
 

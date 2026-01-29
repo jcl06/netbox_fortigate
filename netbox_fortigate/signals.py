@@ -1,49 +1,73 @@
-from __future__ import annotations
-
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 
 from core.choices import JobStatusChoices
 
-from .jobs import FortiGateRunner, compute_next_run
 from .models import FortiGateScheduler
+from .choices import ScheduleModeChoices
+from .jobs import compute_next_run
+from .registry import RUNNER_REGISTRY, get_runner
 
 
-def _delete_pending_jobs(schedule: FortiGateScheduler) -> None:
+def _delete_pending(schedule: FortiGateScheduler) -> None:
     """
-    Remove any enqueued/scheduled jobs that haven't started yet for this schedule.
+    Delete all queued/scheduled jobs for this schedule across ALL registered runners.
     """
-    FortiGateRunner.get_jobs(instance=schedule).filter(
-        status__in=JobStatusChoices.ENQUEUED_STATE_CHOICES
-    ).delete()
+    for runner in RUNNER_REGISTRY.values():
+        runner.get_jobs(instance=schedule).filter(
+            status__in=JobStatusChoices.ENQUEUED_STATE_CHOICES
+        ).delete()
 
 
 @receiver(post_save, sender=FortiGateScheduler)
-def sync_schedule_job(sender, instance: FortiGateScheduler, created: bool, **kwargs):
-    """
-    Keep a single scheduled Job aligned with the schedule record.
-
-    - enabled=True: ensure a job is scheduled at the next matching time
-    - enabled=False: remove pending jobs
-    """
-    # Always clear pending jobs first if we’re toggling/altering schedule parameters
-    _delete_pending_jobs(instance)
+def sync_jobs(sender, instance: FortiGateScheduler, **kwargs):
+    _delete_pending(instance)
 
     if not instance.enabled:
         return
 
-    next_dt = compute_next_run(instance).dt
+    runner = get_runner(instance.job_type)
 
-    # Schedule ONE future run at the calculated time.
-    # The runner itself will schedule the *next* run when it finishes.
-    FortiGateRunner.enqueue_once(
-        instance=instance,
-        schedule_at=next_dt,
-        interval=None,  # IMPORTANT: cron-like scheduling uses schedule_at, not interval
-        schedule_id=instance.pk,
-    )
+    if instance.schedule_mode == ScheduleModeChoices.INTERVAL:
+        if not instance.interval_minutes or instance.interval_minutes < 1:
+            raise ValidationError({"interval_minutes": "Interval must be >= 1 minute."})
+
+        runner.enqueue_once(
+            instance=instance,
+            name=runner.name,
+            schedule_at=None,
+            interval=instance.interval_minutes,
+            schedule_id=instance.pk,
+            data={
+                "trigger": "scheduler",
+                "schedule_id": instance.pk,
+                "schedule_name": instance.name,
+                "job_type": instance.job_type,
+            },
+        )
+        return
+
+    if instance.schedule_mode == ScheduleModeChoices.CRON:
+        next_dt = compute_next_run(instance).dt
+        runner.enqueue_once(
+            instance=instance,
+            name=runner.name,
+            schedule_at=next_dt,
+            interval=None,
+            schedule_id=instance.pk,
+            data={
+                "trigger": "scheduler",
+                "schedule_id": instance.pk,
+                "schedule_name": instance.name,
+                "job_type": instance.job_type,
+            },
+        )
+        return
+
+    raise ValidationError({"schedule_mode": f"Unsupported mode: {instance.schedule_mode!r}"})
 
 
 @receiver(post_delete, sender=FortiGateScheduler)
-def cleanup_schedule_jobs(sender, instance: FortiGateScheduler, **kwargs):
-    _delete_pending_jobs(instance)
+def cleanup_jobs(sender, instance: FortiGateScheduler, **kwargs):
+    _delete_pending(instance)

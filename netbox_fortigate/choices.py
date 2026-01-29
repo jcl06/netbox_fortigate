@@ -18,10 +18,31 @@ OBJECT_TYPE_CHOICES = (
     ("schedule group", "Schedule Group"),
 )
 
+
 CONTENT_TYPE_CHOICES = (
     Q(app_label="netbox_fortigate", model="fortigateinterface") |
     Q(app_label="netbox_fortigate", model="fortigatezone")
 )
+
+
+
+class JobTypeChoices(ChoiceSet):
+    INVENTORY_PULL = "inventory_pull"
+    IMPLEMENT_REQUEST = "implement_request"
+
+    CHOICES = (
+        (INVENTORY_PULL, _("Inventory pull")),
+        (IMPLEMENT_REQUEST, _("Execute Request")),
+    )
+
+class ScheduleModeChoices(ChoiceSet):
+    CRON = "cron"
+    INTERVAL = "interval"
+
+    CHOICES = (
+        (CRON, _("Specific time (daily/weekly/monthly)")),
+        (INTERVAL, _("Every N minutes")),
+    )
 
 
 class ScheduleFrequencyChoices(ChoiceSet):

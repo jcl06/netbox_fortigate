@@ -3,12 +3,17 @@ from netbox.views import generic
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
+from django.contrib.contenttypes.models import ContentType
+
 from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view, ObjectPermissionRequiredMixin
+from core.models import Job
+from core.tables import JobTable
+from dcim.models import Device
 
 from . import forms, tables, filtersets
 from .models import *
-from .jobs import FortiGateRunner
-
+from .jobs import FortiGateInventoryPullRunner, FortiGateRequestRunner
+from .choices import JobTypeChoices
 
 
 class FortiGateDeviceListView(generic.ObjectListView):
@@ -153,22 +158,65 @@ def requests_placeholder(request):
 
 
 class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
-    """
-    Enqueue an immediate run for a schedule.
-    """
-    def post(self, request, pk: int):
-        schedule = get_object_or_404(FortiGateScheduler, pk=pk)
+    queryset = FortiGateScheduler.objects.all()
+    
+    def get_required_permission(self):
+        return "netbox_fortigate.change_fortigatescheduler"
 
-        FortiGateRunner.enqueue(
-            instance=schedule,
-            user=request.user,
-            schedule_id=schedule.pk,
+    def post(self, request, pk: int):
+        schedule = get_object_or_404(self.queryset, pk=pk)
+
+        runner = (
+            FortiGateInventoryPullRunner
+            if schedule.job_type == JobTypeChoices.INVENTORY_PULL
+            else FortiGateRequestRunner
         )
 
-        messages.success(request, f"Enqueued run for schedule '{schedule.name}'.")
+        runner.enqueue(
+            instance=schedule,
+            user=request.user,
+            name=f"{runner.Meta.name} (Run now): {schedule.name}",
+            schedule_id=schedule.pk,
+            data={
+                "trigger": "run_now",
+                "schedule_id": schedule.pk,
+                "schedule_name": schedule.name,
+                "job_type": schedule.job_type,
+            },
+        )
+
+        messages.success(request, f"Enqueued: {runner.Meta.name} for '{schedule.name}'.")
         return redirect(schedule.get_absolute_url())
     
+    
 
+class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
+    queryset = Device.objects.all()
+
+    def get_required_permission(self):
+        return "dcim.change_device"
+
+    def post(self, request, pk: int):
+        device = get_object_or_404(self.queryset, pk=pk)
+
+        # ✅ Attach jobs to plugin-owned object (has a jobs URL/view)
+        fg = get_object_or_404(FortiGateDevice, device=device)
+
+        FortiGateInventoryPullRunner.enqueue(
+            instance=fg,  # ✅ NOT the Device
+            user=request.user,
+            name=FortiGateInventoryPullRunner.name,
+            device_id=device.pk,
+            data={
+                "trigger": "device_button",
+                "device_id": device.pk,
+                "device_name": device.name,
+                "fortigate_device_id": fg.pk,
+            },
+        )
+
+        messages.success(request, f"Enqueued inventory pull for '{device.name}'.")
+        return redirect(device.get_absolute_url())
 
 
 class FortiGateScheduleListView(generic.ObjectListView):
@@ -177,24 +225,72 @@ class FortiGateScheduleListView(generic.ObjectListView):
     filterset = filtersets.FortiGateSchedulerFilterSet
 
 
-class FortiGateScheduleView(generic.ObjectView):
+@register_model_view(FortiGateScheduler)
+class FortiGateScheduleView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = FortiGateScheduler.objects.all()
 
-    # Optional: show recent jobs on the detail page
     def get_extra_context(self, request, instance):
-        jobs = FortiGateRunner.get_jobs(instance=instance).order_by("-created")[:20]
-        return {"jobs": jobs}
+        # Show jobs related to THIS schedule, for the correct runner based on job_type
+        if instance.job_type == JobTypeChoices.INVENTORY_PULL:
+            runner = FortiGateInventoryPullRunner
+        else:
+            runner = FortiGateRequestRunner
 
+        return {
+            # "jobs": jobs,
+            "runner_name": runner.Meta.name,
+        }
+    
+    # def get_extra_context(self, request, instance):
+        
+    #     interfaces = instance.members.all()
+    #     interfaces_table = InterfaceTable(
+    #         interfaces,
+    #         exclude=('device', 'zone'),
+    #         orderable=False
+    #     )
+    #     interfaces_table.configure(request)
 
-class FortiGateScheduleAddView(generic.ObjectEditView):
-    queryset = FortiGateScheduler.objects.all()
-    form = forms.FortiGateSchedulerForm
+    #     ct = ContentType.objects.get_for_model(Zone)
+    #     return {
+    #         'related_models': self.get_related_models(
+    #             request,
+    #             instance,
+    #             extra=(
+    #                 (
+    #                     Policy.objects.restrict(request.user, 'view').filter(
+    #                         Q(destination_interface__object_type=ct, destination_interface__object_id=instance.pk) |
+    #                         Q(source_interface__object_type=ct, source_interface__object_id=instance.pk)
+    #                     ).distinct(), 'zone'
+    #                 ),
+    #             )
+    #         ),
+    #         'interfaces_table': interfaces_table,
+    #         'interfaces_count': interfaces.count(),
+    #     }
 
-
+@register_model_view(FortiGateScheduler, 'edit')
 class FortiGateScheduleEditView(generic.ObjectEditView):
     queryset = FortiGateScheduler.objects.all()
     form = forms.FortiGateSchedulerForm
 
-
+@register_model_view(FortiGateScheduler, 'delete')
 class FortiGateScheduleDeleteView(generic.ObjectDeleteView):
     queryset = FortiGateScheduler.objects.all()
+
+class FortiGateScheduleBulkDeleteView(generic.BulkDeleteView):
+    queryset = FortiGateScheduler.objects.all()
+    filterset = filtersets.FortiGateSchedulerFilterSet
+    table = tables.FortiGateSchedulerTable
+
+
+class FortiGateSchedulerJobsView(generic.ObjectJobsView):
+    def get_jobs(self, instance):
+        object_type = ContentType.objects.get_for_model(instance)
+        qs = Job.objects.filter(object_type=object_type, object_id=instance.id)
+
+        # Optional: filter by runner names if you want
+        return qs.filter(name__in=[
+            FortiGateInventoryPullRunner.name,
+            FortiGateRequestRunner.name,
+        ])
