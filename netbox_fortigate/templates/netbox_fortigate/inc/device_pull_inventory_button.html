@@ -2,9 +2,10 @@
 
 {% if perms.dcim.change_device %}
   <form method="post"
-        action="{% url 'plugins:netbox_fortigate:device_pull_inventory' pk=object.pk %}"
+        action="{% url 'plugins:netbox_fortigate:device_pull_inventory' pk=object.fortigate.pk %}"
         class="d-inline">
     {% csrf_token %}
+    <input type="hidden" value="{{ object.pk }}" name="parent"/>
     <button type="submit" class="btn btn-outline-primary">
     <i class="mdi mdi-play-speed"></i>
       {% trans "Pull Inventory" %}

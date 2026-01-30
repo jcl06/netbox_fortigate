@@ -7,9 +7,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from netbox.jobs import JobRunner
-from dcim.models import Device
 
-from .models import FortiGateScheduler
+from .models import FortiGateScheduler, FortiGateDevice
 from .choices import ScheduleFrequencyChoices, ScheduleModeChoices
 
 
@@ -27,7 +26,7 @@ def _aware(dt: datetime) -> datetime:
     return dt if timezone.is_aware(dt) else timezone.make_aware(dt, tz)
 
 
-def compute_next_run(schedule: FortiGateScheduler) -> NextRun:
+def compute_next_run(schedule) -> NextRun:
     """
     Compute next execution time for CRON schedules only.
     """
@@ -90,128 +89,82 @@ def compute_next_run(schedule: FortiGateScheduler) -> NextRun:
 # RUNNERS
 # =========================
 
-class FortiGateInventoryPullRunner(JobRunner):
-    class Meta:
-        name = "Firewall: Inventory Pull"
+class _JobDataMixin:
+    """
+    Prevent clobbering Job.data by always merging with the latest DB value.
+    """
+    def update_job_data(self, **updates):
+        # Refresh to avoid overwriting keys set by the view or earlier runner steps
+        self.job.refresh_from_db(fields=["data"])
+        data = self.job.data or {}
+        data.update({k: v for k, v in updates.items() if v is not None})
+        self.job.data = data
+        self.job.save(update_fields=["data"])
 
-    def run(self, schedule_id: int | None = None, device_id: int | None = None, *args, **kwargs) -> None:
-        if device_id:
-            device = Device.objects.get(pk=device_id)
-            # do inventory for only this device
-            self.job.data = {
-                **(self.job.data or {}),
-                "started_at": timezone.now().isoformat(),
-            }
-            self.job.save()
+    def seed_job_data(self, data=None) -> None:
+        self.job.refresh_from_db(fields=["data"])
+        job_data = self.job.data or {}
+        changed = False
 
-            # --- do work, update counters along the way ---
-            # summary = self.job.data["summary"]
-            # summary["devices_total"] += 1
-            # summary["devices_ok"] += 1
-            # summary["objects_updated"] += 5
-            # self.job.save(update_fields=["data"])
+        if data:
+            merged = {**job_data, **data}
+            if merged != job_data:
+                job_data = merged
+                changed = True
 
-            # Finish summary
-            self.job.data = {
-                **(self.job.data or {}),
-                "finished_at": timezone.now().isoformat(),
-                "result": "success",
-            }
+        if changed:
+            self.job.data = job_data
             self.job.save(update_fields=["data"])
-            return
-        
-        schedule = FortiGateScheduler.objects.get(pk=schedule_id)
-
-        if not schedule.enabled:
-            return
-
-        # ---- DO INVENTORY WORK HERE ----
-        # - connect to FortiGate
-        # - pull inventory
-        # - update NetBox objects
-        self.job.data = {
-            **(self.job.data or {}),
-            "started_at": timezone.now().isoformat(),
-            "summary": {
-                "devices_total": 0,
-                "devices_ok": 0,
-                "devices_failed": 0,
-                "objects_created": 0,
-                "objects_updated": 0,
-            },
-        }
-        self.job.save()
-
-        # --- do work, update counters along the way ---
-        # summary = self.job.data["summary"]
-        # summary["devices_total"] += 1
-        # summary["devices_ok"] += 1
-        # summary["objects_updated"] += 5
-        # self.job.save(update_fields=["data"])
-
-        # Finish summary
-        self.job.data = {
-            **(self.job.data or {}),
-            "finished_at": timezone.now().isoformat(),
-            "result": "success",
-        }
-        self.job.save(update_fields=["data"])
-
-        # ---- RESCHEDULE IF CRON ----
-        if schedule.schedule_mode == ScheduleModeChoices.CRON:
-            next_dt = compute_next_run(schedule).dt
-            self.__class__.enqueue_once(
-                instance=schedule,
-                name=self.name,
-                schedule_at=next_dt,
-                interval=None,
-                schedule_id=schedule.pk,
-            )
-        # interval mode → NetBox auto-reschedules
 
 
-class FortiGateRequestRunner(JobRunner):
+class FortiGateInventoryPullRunner(_JobDataMixin, JobRunner):
     class Meta:
-        name = "Firewall: Implement Request"
+        name = "Inventory Pull"
 
-    def run(self, schedule_id: int, *args, **kwargs) -> None:
+    def run(self, schedule_id=None, device_id=None, data=None, *args, **kwargs):
+        # ensure metadata exists before we write started_at/finished_at
+        self.seed_job_data(data=data)
+
+        # ✅ never write self.job.data directly
+        self.update_job_data(started_at=timezone.now().isoformat())
+
+        if device_id:
+            device = FortiGateDevice.objects.get(pk=device_id)
+
+            # TODO: do inventory for only this device
+
+            self.update_job_data(
+                finished_at=timezone.now().isoformat(),
+                result="success",
+            )
+            return
+
         schedule = FortiGateScheduler.objects.get(pk=schedule_id)
-
         if not schedule.enabled:
             return
 
-        # ---- DO REQUEST EXECUTION HERE ----
-        # - find approved requests
-        # - push firewall changes
-        # - update request status
-        # Start summary
-        self.job.data = {
-            **(self.job.data or {}),
-            "started_at": timezone.now().isoformat(),
-            "summary": {
+        # Initialize summary without overwriting trigger/meta
+        self.job.refresh_from_db(fields=["data"])
+        data = self.job.data or {}
+        data.setdefault(
+            "summary",
+            {
                 "devices_total": 0,
                 "devices_ok": 0,
                 "devices_failed": 0,
                 "objects_created": 0,
                 "objects_updated": 0,
             },
-        }
-        self.job.save()
-
-        # --- do work, update counters along the way ---
-        # summary = self.job.data["summary"]
-        # summary["devices_total"] += 1
-        # summary["devices_ok"] += 1
-        # summary["objects_updated"] += 5
-        # self.job.save(update_fields=["data"])
-
-        # Finish summary
-        self.job.data = {
-            **(self.job.data or {}),
-            "finished_at": timezone.now().isoformat(),
-            "result": "success",
-        }
+        )
+        self.job.data = data
         self.job.save(update_fields=["data"])
+
+        # TODO: do inventory work for schedule
+
+        self.update_job_data(
+            finished_at=timezone.now().isoformat(),
+            result="success",
+        )
 
         # ---- RESCHEDULE IF CRON ----
         if schedule.schedule_mode == ScheduleModeChoices.CRON:
@@ -222,5 +175,58 @@ class FortiGateRequestRunner(JobRunner):
                 schedule_at=next_dt,
                 interval=None,
                 schedule_id=schedule.pk,
+                trigger="cron",  # ✅ carry trigger forward
+                meta={"schedule_id": schedule.pk, "schedule_name": schedule.name},
             )
-        # interval mode → NetBox auto-reschedules
+
+
+class FortiGateRequestRunner(_JobDataMixin, JobRunner):
+    class Meta:
+        name = "Implement Request"
+
+    def run(self, schedule_id, data=None, *args, **kwargs):
+        self.seed_job_data(data=data)
+
+        schedule = FortiGateScheduler.objects.get(pk=schedule_id)
+        if not schedule.enabled:
+            return
+
+        # start
+        self.update_job_data(started_at=timezone.now().isoformat())
+
+        # ensure summary exists (merge-safe)
+        self.job.refresh_from_db(fields=["data"])
+        data = self.job.data or {}
+        data.setdefault(
+            "summary",
+            {
+                "devices_total": 0,
+                "devices_ok": 0,
+                "devices_failed": 0,
+                "objects_created": 0,
+                "objects_updated": 0,
+            },
+        )
+        self.job.data = data
+        self.job.save(update_fields=["data"])
+
+        # TODO: do work...
+
+        # finish
+        self.update_job_data(
+            finished_at=timezone.now().isoformat(),
+            result="success",
+        )
+
+        # cron reschedule should tag the next job too
+        if schedule.schedule_mode == ScheduleModeChoices.CRON:
+            next_dt = compute_next_run(schedule).dt
+            self.__class__.enqueue_once(
+                instance=schedule,
+                name=self.name,
+                schedule_at=next_dt,
+                interval=None,
+                schedule_id=schedule.pk,
+                trigger="cron",
+                meta={"schedule_id": schedule.pk, "schedule_name": schedule.name},
+            )

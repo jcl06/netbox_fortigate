@@ -1,6 +1,5 @@
 from netbox.plugins import PluginConfig
 
-
 class NetBoxFortigateConfig(PluginConfig):
     name = "netbox_fortigate"
     verbose_name = "FortiGate"
@@ -14,14 +13,22 @@ class NetBoxFortigateConfig(PluginConfig):
         super().ready()
 
         from core.models import ObjectType
-        from .models import FortiGateScheduler 
+        from .models import FortiGateScheduler, FortiGateDevice
+        from utilities.views import register_model_view
+        from dcim.models import Device
+        from netbox_fortigate.views.device_tabs import DeviceFortiGateJobsTabView
         from . import signals # noqa
-        
-        ot = ObjectType.objects.get_for_model(FortiGateScheduler, for_concrete_model=False)
-        if "jobs" not in ot.features:
-            ot.features = list({*ot.features, "jobs"})
-            ot.save(update_fields=["features"])
+        from . import event_rules
+    
 
+        # Ensure ObjectType.features includes "jobs" (DB-backed)
+        for model in (FortiGateDevice, FortiGateScheduler):
+            ot = ObjectType.objects.get_for_model(model, for_concrete_model=False)
+            if "jobs" not in ot.features:
+                ot.features = list({*ot.features, "jobs"})
+                ot.save(update_fields=["features"])
+            
+        register_model_view(Device, name="fortigate", path="fortigate")(DeviceFortiGateJobsTabView)
 
         
 config = NetBoxFortigateConfig

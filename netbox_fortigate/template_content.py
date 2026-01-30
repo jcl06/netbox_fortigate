@@ -1,6 +1,5 @@
 from netbox.plugins import PluginTemplateExtension
 
-
 class FortiGateDeviceButtons(PluginTemplateExtension):
     models = ("dcim.device",)
 
@@ -8,7 +7,7 @@ class FortiGateDeviceButtons(PluginTemplateExtension):
         device = self.context["object"]
 
         # Decide when to show the button. Example: platform contains "forti"
-        is_fortigate = bool(device.device_type and "fortigate" in (device.device_type.slug or ""))
+        is_fortigate = bool(device.device_type and "fortigate" in name.lower() for name in [device.device_type.slug, device.device_type.model])
 
         if not is_fortigate:
             return ""

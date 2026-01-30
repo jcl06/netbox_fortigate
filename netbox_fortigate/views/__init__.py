@@ -10,10 +10,10 @@ from core.models import Job
 from core.tables import JobTable
 from dcim.models import Device
 
-from . import forms, tables, filtersets
-from .models import *
-from .jobs import FortiGateInventoryPullRunner, FortiGateRequestRunner
-from .choices import JobTypeChoices
+from .. import forms, tables, filtersets
+from ..models import *
+from ..jobs import FortiGateInventoryPullRunner, FortiGateRequestRunner
+from ..choices import JobTypeChoices
 
 
 class FortiGateDeviceListView(generic.ObjectListView):
@@ -159,7 +159,7 @@ def requests_placeholder(request):
 
 class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
     queryset = FortiGateScheduler.objects.all()
-    
+
     def get_required_permission(self):
         return "netbox_fortigate.change_fortigatescheduler"
 
@@ -175,10 +175,10 @@ class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
         runner.enqueue(
             instance=schedule,
             user=request.user,
-            name=f"{runner.Meta.name} (Run now): {schedule.name}",
+            name=f"Manual Pull: {schedule.name}",
             schedule_id=schedule.pk,
             data={
-                "trigger": "run_now",
+                "trigger": "manual",
                 "schedule_id": schedule.pk,
                 "schedule_name": schedule.name,
                 "job_type": schedule.job_type,
@@ -190,25 +190,41 @@ class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
     
     
 
+
 class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
-    queryset = Device.objects.all()
+    queryset = FortiGateDevice.objects.all()
 
     def get_required_permission(self):
         return "dcim.change_device"
 
-    def post(self, request, pk: int):
-        device = get_object_or_404(self.queryset, pk=pk)
+    def get_object(self, parent: int | None = None, **kwargs):
+        """
+        Return an object for editing. If parent is provided, resolve the FortiGateDevice.
+        Otherwise resolve the core Device.
+        """
+        if parent:
+            queryset = Device.objects.all()
+            return get_object_or_404(queryset, pk=parent)
+        return get_object_or_404(self.queryset, **kwargs)
 
-        # ✅ Attach jobs to plugin-owned object (has a jobs URL/view)
-        fg = get_object_or_404(FortiGateDevice, device=device)
+    def post(self, request, **kwargs):
+        parent = request.POST.get("parent") or None
 
+        # Keep your original redirect target behavior
+        obj = fg = get_object_or_404(self.queryset, **kwargs)
+        if parent:
+            obj = self.get_object(parent=int(parent), **kwargs)
+
+        device = get_object_or_404(Device, fortigate=fg)
+
+        # Enqueue job and then persist job.data explicitly
         FortiGateInventoryPullRunner.enqueue(
-            instance=fg,  # ✅ NOT the Device
+            instance=fg,
             user=request.user,
-            name=FortiGateInventoryPullRunner.name,
+            name=f"{FortiGateInventoryPullRunner.name}: {device.name}",
             device_id=device.pk,
             data={
-                "trigger": "device_button",
+                "trigger": "manual",
                 "device_id": device.pk,
                 "device_name": device.name,
                 "fortigate_device_id": fg.pk,
@@ -216,7 +232,7 @@ class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
         )
 
         messages.success(request, f"Enqueued inventory pull for '{device.name}'.")
-        return redirect(device.get_absolute_url())
+        return redirect(obj.get_absolute_url())
 
 
 class FortiGateScheduleListView(generic.ObjectListView):
@@ -240,34 +256,7 @@ class FortiGateScheduleView(GetRelatedModelsMixin, generic.ObjectView):
             # "jobs": jobs,
             "runner_name": runner.Meta.name,
         }
-    
-    # def get_extra_context(self, request, instance):
-        
-    #     interfaces = instance.members.all()
-    #     interfaces_table = InterfaceTable(
-    #         interfaces,
-    #         exclude=('device', 'zone'),
-    #         orderable=False
-    #     )
-    #     interfaces_table.configure(request)
 
-    #     ct = ContentType.objects.get_for_model(Zone)
-    #     return {
-    #         'related_models': self.get_related_models(
-    #             request,
-    #             instance,
-    #             extra=(
-    #                 (
-    #                     Policy.objects.restrict(request.user, 'view').filter(
-    #                         Q(destination_interface__object_type=ct, destination_interface__object_id=instance.pk) |
-    #                         Q(source_interface__object_type=ct, source_interface__object_id=instance.pk)
-    #                     ).distinct(), 'zone'
-    #                 ),
-    #             )
-    #         ),
-    #         'interfaces_table': interfaces_table,
-    #         'interfaces_count': interfaces.count(),
-    #     }
 
 @register_model_view(FortiGateScheduler, 'edit')
 class FortiGateScheduleEditView(generic.ObjectEditView):
@@ -294,3 +283,6 @@ class FortiGateSchedulerJobsView(generic.ObjectJobsView):
             FortiGateInventoryPullRunner.name,
             FortiGateRequestRunner.name,
         ])
+    
+
+

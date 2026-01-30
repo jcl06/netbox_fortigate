@@ -3,7 +3,7 @@ from django.utils.translation import gettext as _
 from netbox.plugins.navigation import PluginMenu, PluginMenuButton, PluginMenuItem
 
 
-menu_items = (
+fw_menu_items = (
     PluginMenuItem(
         link="plugins:netbox_fortigate:fortigatedevice_list",
         link_text=_("Firewalls"),
@@ -76,7 +76,7 @@ menu = PluginMenu(
     label=_("Firewalls"),
     icon_class='mdi mdi-wall',
     groups=(
-        (_("FortiGate"), menu_items),
+        (_("FortiGate"), fw_menu_items),
         (_("Jobs"), jobs_menu_items),
         (_("Request"), request_menu_items),
     ),

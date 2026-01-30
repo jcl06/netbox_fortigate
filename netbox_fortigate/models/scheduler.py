@@ -98,8 +98,8 @@ class FortiGateScheduler(PrimaryModel, JobsMixin):
 
     class Meta:
         ordering = ("name",)
-        verbose_name = "FortiGate Scheduler"
-        verbose_name_plural = "FortiGate Schedulers"
+        verbose_name = "Job Scheduler"
+        verbose_name_plural = "Job Schedulers"
         constraints = [
             # Interval schedules: unique per (job_type, interval_minutes)
             models.UniqueConstraint(

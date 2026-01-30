@@ -1,0 +1,84 @@
+{% extends 'generic/object.html' %}
+{% load i18n %}
+
+{% block extra_controls %}
+  {% if perms.dcim.change_device %}
+    <form method="post"
+            action="{% url 'plugins:netbox_fortigate:device_pull_inventory' pk=object.pk %}"
+            class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-primary">
+        <i class="mdi mdi-play-speed"></i>
+        {% trans "Pull Inventory" %}
+        </button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+
+{% block content %}
+  <div class="row">
+    <div class="col col-md-6">
+
+      <div class="card">
+        <h5 class="card-header">{% trans "Firewall" %}</h5>
+        <div class="card-body">
+
+          <table class="table table-hover attr-table">
+            <tr>
+              <th scope="row">{% trans "Device" %}</th>
+              <td>
+                <a href="{{ object.device.get_absolute_url }}">{{ object.device }}</a>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Enabled" %}</th>
+              <td>{{ object.enabled|yesno:_("Yes,No") }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Role" %}</th>
+              <td>{{ object.role }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Management IP" %}</th>
+              <td>
+                {% if object.mgmt_ip %}
+                  <a href="{{ object.mgmt_ip.get_absolute_url }}">{{ object.mgmt_ip }}</a>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Default VDOM" %}</th>
+              <td>{{ object.default_vdom }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "API Port" %}</th>
+              <td>{{ object.api_port }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "SSH Port" %}</th>
+              <td>{{ object.ssh_port }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "FortiOS Version" %}</th>
+              <td>{{ object.fortios_version }}</td>
+            </tr>
+            <tr>
+              <th scope="row">{% trans "Priority" %}</th>
+              <td>{{ object.priority }}</td>
+            </tr>
+          </table>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col col-md-6">
+      {# The Jobs tab/view is registered via JobsMixin + register_models(), so NetBox will render it as a tab. #}
+      {# You can add other cards here later (credentials, last sync, etc.). #}
+    </div>
+  </div>
+{% endblock %}

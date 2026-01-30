@@ -13,6 +13,7 @@ __all__ = (
 )
 
 class FortiGateDeviceTable(NetBoxTable):
+    id = tables.Column(linkify=True)
     device = tables.Column(linkify=True)
     role = tables.Column()
 
@@ -20,6 +21,7 @@ class FortiGateDeviceTable(NetBoxTable):
         model = FortiGateDevice
         fields = (
             "pk",
+            "id",
             "device",
             "ip_address",
             "role",
