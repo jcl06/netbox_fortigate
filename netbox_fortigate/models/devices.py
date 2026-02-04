@@ -8,6 +8,8 @@ from django.urls import reverse
 
 from netbox.models import PrimaryModel, JobsMixin
 from ipam.fields import IPAddressField, IPNetworkField
+from netbox_fortigate.utils.settings import get_plugin_default
+from django.core.validators import RegexValidator
 
 __all__ = (
     "FortiGateDevice",
@@ -19,22 +21,19 @@ __all__ = (
     # "FortiGateObject"
 )
 
-def _plugin_default(key: str, fallback: int) -> int:
-    cfg = getattr(settings, "PLUGINS_CONFIG", {}) or {}
-    plugin_cfg = cfg.get("netbox_fortigate", {}) or {}
-    value = plugin_cfg.get(key, None)
-    try:
-        return int(value) if value is not None else fallback
-    except (TypeError, ValueError):
-        return fallback
 
 
-def default_api_port() -> int:
-    return _plugin_default("default_api_port", 443)
+fortios_version_validator = RegexValidator(
+    regex=r"^v\d+\.\d+(?:\.\d+)?$",
+    message=_("Enter a FortiOS version like v7.2 or v7.2.3."),
+)
+
+def default_api_port():
+    return get_plugin_default("default_api_port", 443) or 443
 
 
-def default_ssh_port() -> int:
-    return _plugin_default("default_ssh_port", 22)
+def default_ssh_port():
+    return get_plugin_default("default_ssh_port", 22) or 22
 
 
 class FortiGateDevice(PrimaryModel, JobsMixin):
@@ -66,7 +65,12 @@ class FortiGateDevice(PrimaryModel, JobsMixin):
     default_vdom = models.CharField(verbose_name=_("Default VDOM"), max_length=64, default="root")
     api_port = models.PositiveIntegerField(verbose_name=_("API Port"), default=default_api_port)
     ssh_port = models.PositiveIntegerField(verbose_name=_("SSH Port"), default=default_ssh_port)
-    fortios_version = models.CharField(verbose_name=_("FortiOS Version"), max_length=32)
+    fortios_version = models.CharField(
+        verbose_name=_("FortiOS Version"),
+        max_length=32,
+        validators=[fortios_version_validator],
+        help_text=_("Format: v7.2 or v7.2.3"),
+    )
 
     class Meta:
         ordering = ("device__name",)
@@ -174,6 +178,8 @@ class FortiGateInterface(PrimaryModel):
         help_text=_("Interface status"),
     )
 
+    is_decommissioned = models.BooleanField(verbose_name=_("decommissioned"), default=False)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=("fortigate", "name"), name="uniq_fg_if_name"),
@@ -258,6 +264,8 @@ class FortiGateZone(PrimaryModel):
         related_name="zones",
         blank=True,
     )
+
+    is_decommissioned = models.BooleanField(verbose_name=_("decommissioned"), default=False)
 
     class Meta:
         ordering = ("fortigate__device__name", "name")

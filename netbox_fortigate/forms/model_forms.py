@@ -7,10 +7,7 @@ from netbox.forms import NetBoxModelForm
 
 
 from ..models import *
-from ..choices import (
-    ScheduleModeChoices,
-    ScheduleFrequencyChoices,
-)
+from ..choices import ScheduleModeChoices
 
 
 __all__ = (

@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.core.exceptions import ValidationError
+from django.db import close_old_connections
 from django.utils import timezone
 
 from netbox.jobs import JobRunner
+from .utils.settings import get_plugin_default
+from .utils.inventory import update_inventory
 
 from .models import FortiGateScheduler, FortiGateDevice
 from .choices import ScheduleFrequencyChoices, ScheduleModeChoices
@@ -121,63 +125,134 @@ class FortiGateInventoryPullRunner(_JobDataMixin, JobRunner):
     class Meta:
         name = "Inventory Pull"
 
-    def run(self, schedule_id=None, device_id=None, data=None, *args, **kwargs):
+    def run(self, schedule_id=None, fg_id=None, data=None, *args, **kwargs):
         # ensure metadata exists before we write started_at/finished_at
         self.seed_job_data(data=data)
 
         # ✅ never write self.job.data directly
         self.update_job_data(started_at=timezone.now().isoformat())
 
-        if device_id:
-            device = FortiGateDevice.objects.get(pk=device_id)
+        DEBUG = get_plugin_default("DEBUG", False)
+        max_workers = get_plugin_default("inventory_max_workers", 10)
 
-            # TODO: do inventory for only this device
+        if fg_id:
+            devices = list(FortiGateDevice.objects.filter(pk=fg_id))
+        else:
+            schedule = FortiGateScheduler.objects.get(pk=schedule_id)
+            if not schedule.enabled:
+                return
+            
+            devices = list(FortiGateDevice.objects.filter(enabled=True))
 
-            self.update_job_data(
-                finished_at=timezone.now().isoformat(),
-                result="success",
-            )
-            return
+        items: list[dict] = []
+        failed = success = with_errors = 0
 
-        schedule = FortiGateScheduler.objects.get(pk=schedule_id)
-        if not schedule.enabled:
-            return
+        def worker(fg_id: int):
+            close_old_connections()
+            fg = FortiGateDevice.objects.get(pk=fg_id)
 
-        # Initialize summary without overwriting trigger/meta
+            # IMPORTANT: do not rewrite update_inventory here; just call it
+            # Expected return: [ok(bool), state_or_error(str), items(list)]
+            result = update_inventory(fg, DEBUG=DEBUG)
+            return fg_id, result
+
+        results_by_id = {}
+
+        if max_workers <= 1 or len(devices) <= 1:
+            for fg in devices:
+                fg_id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG)
+                results_by_id[fg_id] = result
+        else:
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = [pool.submit(worker, fg.pk) for fg in devices]
+                for fut in as_completed(futures):
+                    fg_id, result = fut.result()
+                    results_by_id[fg_id] = result
+
+        # ---- process results (ported from process_inventory_results) ----
+        for fg in devices:
+            status = results_by_id.get(fg.pk, [False, "No result", []])
+
+            ok = bool(status[0])
+            if not ok:
+                # status[1] is error message
+                items.append(
+                    {
+                        "device": fg.device.name,
+                        "job name": "inventory pull",
+                        "status": "Failed",
+                        "errors": status,
+                    }
+                )
+                failed += 1
+                # status[2] may contain partial per-category items
+                if len(status) >= 3:
+                    items += (status[2] or [])
+                continue
+
+            # status[1] is state string when ok=True
+            if status[1] == "Successful":
+                success += 1
+            elif status[1] == "Successful with Errors":
+                with_errors += 1
+            else:
+                # treat unknown state as with_errors but keep data
+                failed += 1
+
+            if len(status) >= 3:
+                items += (status[2] or [])
+            
+
+        # Determine job result (ported from pull_inventories)
+        if len(devices) == failed and failed > 0:
+            state = "Failed"
+        elif len(devices) == success and success > 0 and with_errors == 0:
+            state = "Successful"
+        else:
+            state = "Successful with Errors"
+
+        started = timezone.localtime().strftime("%b-%d-%Y %H:%M")
+
+        # ---- write job data (merge-safe) ----
         self.job.refresh_from_db(fields=["data"])
-        data = self.job.data or {}
-        data.setdefault(
-            "summary",
+        job_data = self.job.data or {}
+        job_data.setdefault("summary", {})
+        job_data["summary"].update(
             {
-                "devices_total": 0,
-                "devices_ok": 0,
-                "devices_failed": 0,
-                "objects_created": 0,
-                "objects_updated": 0,
-            },
+                "devices_total": len(devices),
+                "successful": success,
+                "failed": failed,
+                "successful_with_errors": with_errors,
+            }
         )
-        self.job.data = data
+        job_data.update(
+            {
+                "items": items,            
+                "time_started": started,
+                "state": state,
+            }
+        )
+        self.job.data = job_data
         self.job.save(update_fields=["data"])
-
-        # TODO: do inventory work for schedule
-
-        self.update_job_data(
-            finished_at=timezone.now().isoformat(),
-            result="success",
-        )
-
+        self.update_job_data(finished_at=timezone.now().isoformat())
+                
         # ---- RESCHEDULE IF CRON ----
-        if schedule.schedule_mode == ScheduleModeChoices.CRON:
-            next_dt = compute_next_run(schedule).dt
-            self.__class__.enqueue_once(
-                instance=schedule,
-                name=self.name,
-                schedule_at=next_dt,
-                interval=None,
-                schedule_id=schedule.pk,
-                trigger="cron",  # ✅ carry trigger forward
-                meta={"schedule_id": schedule.pk, "schedule_name": schedule.name},
-            )
+        if not fg_id:
+            if schedule.schedule_mode == ScheduleModeChoices.CRON:
+                next_dt = compute_next_run(schedule).dt
+                self.__class__.enqueue_once(
+                    instance=schedule,
+                    name=self.name,
+                    schedule_at=next_dt,
+                    interval=None,
+                    schedule_id=schedule.pk,
+                    trigger="cron",
+                    meta={"schedule_id": schedule.pk, "schedule_name": schedule.name},
+                )
+
+        if state == "Failed":
+            raise RuntimeError(f"Inventory pull failed for {failed} device(s)")
+
 
 
 class FortiGateRequestRunner(_JobDataMixin, JobRunner):

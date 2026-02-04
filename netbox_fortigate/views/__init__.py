@@ -222,12 +222,12 @@ class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
             instance=fg,
             user=request.user,
             name=f"{FortiGateInventoryPullRunner.name}: {device.name}",
-            device_id=device.pk,
+            fg_id=fg.pk,
             data={
                 "trigger": "manual",
-                "device_id": device.pk,
+                "fortigate_id": fg.pk,
                 "device_name": device.name,
-                "fortigate_device_id": fg.pk,
+                "device_id": device.pk,
             },
         )
 

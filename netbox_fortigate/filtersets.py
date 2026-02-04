@@ -12,7 +12,7 @@ __all__ = (
     "FortiGateZoneFilterSet",
     "FortiGateRouteFilterSet",
     "FortiGateObjectFilterSet",
-    "FortiGateSchedulrFilterSet"
+    "FortiGateSchedulerFilterSet"
 )
 
 class FortiGateDeviceFilterSet(NetBoxModelFilterSet):

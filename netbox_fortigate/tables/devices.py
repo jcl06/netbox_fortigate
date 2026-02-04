@@ -40,6 +40,9 @@ class FortiGateInterfaceTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
+    actions = columns.ActionsColumn(
+        actions=('delete',) 
+    )
 
     class Meta(NetBoxTable.Meta):
         model = FortiGateInterface
@@ -62,6 +65,9 @@ class FortiGateZoneTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
     interface = tables.ManyToManyColumn()
+    actions = columns.ActionsColumn(
+        actions=('delete',) 
+    )
 
     class Meta(NetBoxTable.Meta):
         model = FortiGateZone
@@ -82,7 +88,9 @@ class FortiGateRouteTable(NetBoxTable):
     route = tables.Column(linkify=True)
     interface = tables.Column(linkify=True)
     next_hop = tables.Column(linkify=True)
-
+    actions = columns.ActionsColumn(
+        actions=('delete',) 
+    )
     class Meta(NetBoxTable.Meta):
         model = FortiGateRoute
         fields = (
