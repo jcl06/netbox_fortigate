@@ -88,6 +88,7 @@ class FortiGateScheduler(PrimaryModel, JobsMixin):
         verbose_name=_("Day of month"),
         help_text=_("Required for monthly schedules (1-31). If a month is shorter, the job will run on the month's last day."),
     )
+    is_decommissioned = models.BooleanField(verbose_name=_("decommissioned"), default=False)
 
     # Optional: if you want schedules in a specific TZ rather than server TZ, add a tz field
     # timezone = models.CharField(max_length=64, default="UTC")

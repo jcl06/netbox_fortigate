@@ -249,7 +249,7 @@ class FortiGateZone(PrimaryModel):
     type = models.CharField(
         max_length=16,
         default="normal",
-        choices=(("normal", "Normal"), ("sdwan", "SDWAN")),
+        choices=(("normal", "Zone"), ("sdwan", "SD-WAN Zone")),
     )
 
     intrazone = models.CharField(
@@ -366,6 +366,9 @@ class FortiGateRoute(PrimaryModel):
         ]
         verbose_name = _("routing table")
         verbose_name_plural = _("routing table")
+
+    def get_absolute_url(self):
+        return f'{reverse("plugins:netbox_fortigate:fortigateroute_list")}?prefix={self.route}'
 
     @property
     def device(self):

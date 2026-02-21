@@ -3,6 +3,7 @@ from django.urls import include, path
 from utilities.urls import get_model_urls
 from .models import FortiGateScheduler
 from . import views
+from .views.check_policy import PolicyView, DrawPathView, draw_path, policy_view
 
 app_name = "netbox_fortigate"
 
@@ -21,7 +22,7 @@ urlpatterns = [
 
     # Zones
     path("zones/", views.FortiGateZoneListView.as_view(), name="fortigatezone_list"),
-    path("zones/delete/", views.FortiGateZoneDeleteView.as_view(), name="fortigatezone_bulk_delete"),
+    path("zones/delete/", views.FortiGateZoneBulkDeleteView.as_view(), name="fortigatezone_bulk_delete"),
     path('zones/<int:pk>/', include(get_model_urls('netbox_fortigate', 'fortigatezone'))),
 
     # Routes
@@ -47,4 +48,8 @@ urlpatterns = [
 
     # Requests placeholder for now
     path("requests/", views.requests_placeholder, name="requests"),
+    path('check-policy/', DrawPathView.as_view(), name='check_policy'),
+    path('check-policy/<int:fortigate>/<int:pid>/', PolicyView.as_view(), name ='policy_view'),
+    path('check-policy1/', draw_path, name='check_policy1'),
+    path('check-policy1/<int:fortigate>/<int:pid>/', policy_view, name ='policy_view1'),
 ]

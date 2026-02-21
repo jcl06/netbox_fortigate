@@ -1,0 +1,64 @@
+{% extends 'generic/object.html' %}
+{% load i18n %}
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col col-12 col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Zone" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Device" %}</th>
+            <td>{{ object.fortigate.device|linkify }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Name" %}</th>
+            <td>{{ object.name }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Description" %}</th>
+            <td>{{ object.description|placeholder }} </td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Type" %}</th>
+            <td>{{ object.type|bettertitle }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Intra-zone Access" %}</th>
+            <td>{% badge object.intrazone|bettertitle bg_color=object.get_intrazone_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Decommissioned" %}</th>
+            <td>{% checkmark object.is_decommissioned %} </td>
+          </tr>
+        </table>
+      </div>
+    {% include 'inc/panels/tags.html' %}
+    </div>
+    <div class="col col-12 col-md-6">
+      {% include 'inc/panels/related_objects.html' %}
+      <div class="card">
+        <h2 class="card-header">{% trans "Comments" %}</h2>
+        <div class="card-body">
+            {% if object.comments %}
+            <span class="font-monospace small">{{ object.comments|linebreaksbr }}</span>
+            {% else %}
+            <span class="text-muted">{% trans "None" %}</span>
+            {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col col-12 col-md-12">
+      {% include 'inc/panel_table.html' with table=interfaces_table heading="Interface Members" %}
+      {% if interfaces_count > interfaces_table.rows|length %}
+          <div class="float-end">
+              <a href="{% url 'plugins:netbox_fortigate:fortigateinterface_list' %}?request_id={{ object.request_id }}" class="btn btn-primary">
+                {% blocktrans trimmed with count=interfaces_count %}
+                  See All {{ count }} Interfaces
+                {% endblocktrans %}
+              </a>
+          </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

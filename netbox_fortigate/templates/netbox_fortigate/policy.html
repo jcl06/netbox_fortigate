@@ -1,0 +1,60 @@
+{% extends 'base/layout.html' %}
+{% load static %}
+
+{% block head %}
+{% endblock %}
+{% block content-header %}
+    <ol class="small breadcrumb mt-2">
+        <li class="breadcrumb-item"><a href="#">Network Automation</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'task' %}">{{ menu }}</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+    <h5 class="mb-3 text-uppercase">{{ title }}</h5>
+{% endblock %}
+
+{% block page %}
+    <div class="mt-3">
+        <!--input type="hidden" id='csrf_token' name="csrfmiddlewaretoken" value="{{ csrf_token }}"-->
+        {% if policy %}
+        <div class="d-flex flex-column inner-div">
+            <table>
+                {% for key, value in policy.items %}
+                    <tr>
+                        <td style="width: 105px;">{{ key }}:</td>
+                        <td {% if key|lower == 'action' %}class="{{ value|lower }}"{% endif %}>{{ value }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+        {% if error %}
+            <p>{{ error }}</p>
+        {% endif %}
+        
+    </div>
+{% endblock %}
+
+{% block script %}
+<style>
+    table {
+        width: 800px;
+        font-size: 12px;
+    }
+    td:first-child {
+        align-content: start;
+        font-weight: bold;
+    }
+    td {
+        padding: 0 5px;
+    }
+    .accept {
+        color: green;
+        font-weight: bold;
+    }
+    .deny {
+        color: red;
+        font-weight: bold;
+    }
+    
+</style>
+{% endblock %}

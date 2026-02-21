@@ -1,0 +1,21 @@
+.dark {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+svg {
+  display: block;
+  margin: 0 auto;
+}
+
+.node, .host_label, .label1, .label2 {
+  font-family: Arial, sans-serif;
+  text-anchor: middle;
+}
+
+.label1 { font-size: 11px; text-anchor: start; }
+.label2 { font-size: 11px; text-anchor: end; }
+.host_label, .node { font-size: 12px; }
+
+.node-symbol { font-size: 12px; text-anchor: middle; }
+.node-symbol.allow { fill: green; }
+.node-symbol.deny, .node-symbol.unknown { fill: red; }

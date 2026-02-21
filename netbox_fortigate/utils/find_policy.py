@@ -1,8 +1,9 @@
 import logging
 
 from django.conf import settings
-from .fortigate import FORTIGATE
 from .settings import get_plugin_default
+
+from ..utils.api import API
 
 __all__ = (
     'find_policy',
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 
-def find_policy(device_ip, srcintf, src, dst, protocol=1, port=0, auth_type=None, user_group=None, icmptype=None, device=None):
+def find_policy(device, srcintf, src, dst, protocol=1, port=0, auth_type=None, user_group=None, icmptype=None):
     """
     :param device_ip:
     :param srcintf:
@@ -30,15 +31,20 @@ def find_policy(device_ip, srcintf, src, dst, protocol=1, port=0, auth_type=None
     fortigate = None
     try:
         data = {
-            'ip': device_ip,
+            'ip': device.ip_address,
             'username': get_plugin_default('fortigates_username'),
             'password': get_plugin_default('fortigates_password'),
             'port': get_plugin_default("default_api_port", 443) or 443,
             'device': device
         }
+        FORTIGATE = API.get(device.fortios_version.strip(), None)
+        if not FORTIGATE:
+            raise Exception(f"No available API client for FortiOS v{device.fortios_version}")
+        
         fortigate = FORTIGATE(data, debug=settings.DEBUG)
         if fortigate.ERROR:
             raise Exception(fortigate.ERROR)
+        
         options = {
             "srcintf": srcintf,
             "sourceip": src,

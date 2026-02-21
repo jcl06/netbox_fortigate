@@ -1,8 +1,10 @@
+import netaddr
 import django_filters
-
+from netaddr.core import AddrFormatError
 from netbox.filtersets import NetBoxModelFilterSet
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from utilities.filters import MultiValueCharFilter
 
 from .models import *
 
@@ -59,6 +61,10 @@ class FortiGateZoneFilterSet(NetBoxModelFilterSet):
 
 
 class FortiGateRouteFilterSet(NetBoxModelFilterSet):
+    prefix = MultiValueCharFilter(
+        method="filter_prefix",
+        label="Prefix",
+    )
     fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
     version = django_filters.NumberFilter(field_name="version")
     type = django_filters.CharFilter(field_name="type", lookup_expr="icontains")
@@ -68,6 +74,30 @@ class FortiGateRouteFilterSet(NetBoxModelFilterSet):
     class Meta:
         model = FortiGateRoute
         fields = ("fortigate_id", "version", "type", "enabled", "interface_id")
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        qs_filter = Q(description__icontains=value)
+        qs_filter |= Q(route__contains=value.strip())
+        qs_filter |= Q(type__icontains=value)
+        qs_filter |= Q(gateway__contains=value)
+        try:
+            prefix = str(netaddr.IPNetwork(value.strip()).cidr)
+            qs_filter |= Q(route__net_contains_or_equals=prefix)
+            qs_filter |= Q(route__contains=value.strip())
+        except (AddrFormatError, ValueError):
+            pass
+        return queryset.filter(qs_filter)
+
+    def filter_prefix(self, queryset, name, value):
+        query_values = []
+        for v in value:
+            try:
+                query_values.append(netaddr.IPNetwork(v))
+            except (AddrFormatError, ValueError):
+                pass
+        return queryset.filter(route__in=query_values)
 
 
 class FortiGateObjectFilterSet(NetBoxModelFilterSet):

@@ -49,7 +49,7 @@ class FortiGateInterfaceTable(NetBoxTable):
         fields = (
             "pk",
             "name",
-            "fortigate__device",
+            "fortigate",
             "enabled",
             "ip",
             "type",
@@ -64,7 +64,6 @@ class FortiGateInterfaceTable(NetBoxTable):
 class FortiGateZoneTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
-    interface = tables.ManyToManyColumn()
     actions = columns.ActionsColumn(
         actions=('delete',) 
     )
@@ -74,18 +73,17 @@ class FortiGateZoneTable(NetBoxTable):
         fields = (
             "pk",
             "name",
-            "fortigate__device",
+            "fortigate",
             "type",
             "intrazone",
-            "interface",
             "last_updated",
         )
 
 
 
 class FortiGateRouteTable(NetBoxTable):
-    fortigate = tables.Column(linkify=True)
     route = tables.Column(linkify=True)
+    fortigate = tables.Column(linkify=True)
     interface = tables.Column(linkify=True)
     next_hop = tables.Column(linkify=True)
     actions = columns.ActionsColumn(
@@ -96,7 +94,7 @@ class FortiGateRouteTable(NetBoxTable):
         fields = (
             "pk",
             "route",
-            "fortigate__device",
+            "fortigate",
             "distance",
             "metric",
             "type",

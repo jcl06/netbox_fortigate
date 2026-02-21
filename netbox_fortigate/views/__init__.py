@@ -6,6 +6,7 @@ from django.views import View
 from django.contrib.contenttypes.models import ContentType
 
 from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view, ObjectPermissionRequiredMixin
+from netbox.object_actions import AddObject, BulkDelete, BulkEdit, BulkExport, BulkImport, BulkRename
 from core.models import Job
 from core.tables import JobTable
 from dcim.models import Device
@@ -56,14 +57,24 @@ class FortiGateInterfaceListView(generic.ObjectListView):
     queryset = FortiGateInterface.objects.all()
     table = tables.FortiGateInterfaceTable
     filterset = filtersets.FortiGateInterfaceFilterSet
+    actions = (BulkExport, BulkDelete)
 
 @register_model_view(FortiGateInterface)
 class FortiGateInterfaceView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = FortiGateInterface.objects.all()
 
     def get_extra_context(self, request, instance):
+        child_interfaces = FortiGateInterface.objects.restrict(request.user, 'view').filter(parent=instance)
+        child_interfaces_table = tables.FortiGateInterfaceTable(
+            child_interfaces,
+            exclude=('fortigate__device', 'parent'),
+            orderable=False
+        )
+        child_interfaces_table.configure(request)
+        
         return {
-            'related_models': self.get_related_models(request, instance),
+            "related_models": self.get_related_models(request, instance),
+            'child_interfaces_table': child_interfaces_table,
         }
 
 @register_model_view(FortiGateInterface, 'delete')
@@ -80,21 +91,31 @@ class FortiGateZoneListView(generic.ObjectListView):
     queryset = FortiGateZone.objects.all()
     table = tables.FortiGateZoneTable
     filterset = filtersets.FortiGateZoneFilterSet
+    actions = (BulkExport, BulkDelete)
 
 @register_model_view(FortiGateZone)
 class FortiGateZoneView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = FortiGateZone.objects.all()
-
+    
     def get_extra_context(self, request, instance):
+        interfaces = instance.interface.all()
+        interfaces_table = tables.FortiGateInterfaceTable(
+            interfaces,
+            exclude=('fortigate__device',),
+            orderable=False
+        )
+        interfaces_table.configure(request)
         return {
             'related_models': self.get_related_models(request, instance),
+            'interfaces_table': interfaces_table,
+            'interfaces_count': interfaces.count(),
         }
 
 @register_model_view(FortiGateZone, 'delete')
 class FortiGateZoneDeleteView(generic.ObjectDeleteView):
     queryset = FortiGateZone.objects.all()
 
-class FortiGatZoneBulkDeleteView(generic.BulkDeleteView):
+class FortiGateZoneBulkDeleteView(generic.BulkDeleteView):
     queryset = FortiGateZone.objects.all()
     filterset = filtersets.FortiGateZoneFilterSet
     table = tables.FortiGateZoneTable
@@ -103,15 +124,8 @@ class FortiGateRouteListView(generic.ObjectListView):
     queryset = FortiGateRoute.objects.all()
     table = tables.FortiGateRouteTable
     filterset = filtersets.FortiGateRouteFilterSet
-
-@register_model_view(FortiGateRoute)
-class FortiGateRouteView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateRoute.objects.all()
-
-    def get_extra_context(self, request, instance):
-        return {
-            'related_models': self.get_related_models(request, instance),
-        }
+    actions = (BulkExport, BulkDelete)
+    
 
 @register_model_view(FortiGateRoute, 'delete')
 class FortiGateRouteDeleteView(generic.ObjectDeleteView):

@@ -1,0 +1,147 @@
+{% extends 'generic/_base.html' %}
+{% load static %}
+
+{% block title %}Check Policy{% endblock %}
+
+{% block head %}
+  {{ block.super }}
+  <script>
+    // Provide correct static URLs to topology.js (fixes white blocks)
+    window.NBFORTIGATE_ASSETS = {
+      fortigateLight: "{% static 'netbox_fortigate/img/light-fortigate.png' %}",
+      fortigateDark: "{% static 'netbox_fortigate/img/dark-fortigate.png' %}",
+      host: "{% static 'netbox_fortigate/img/host.png' %}",
+      hostLight: "{% static 'netbox_fortigate/img/host-light.png' %}",
+    };
+  </script>
+{% endblock %}
+
+{% block content %}
+    <div class="d-flex flex-column inner-div">
+      <div class="d-flex justify-content-center">
+      <form
+        method="post"
+        id="form1"
+        class="d-flex justify-content-center"
+        hx-post="."
+        hx-trigger="submit"
+        hx-swap="none"
+      >
+        {% csrf_token %}
+
+        <div class="d-flex gap-2 align-items-end flex-wrap" style="border-bottom: 0 !important;">
+          <div class="form-group flex-fill">
+            <label class="form-label required" for="src">Source</label>
+            <input class="form-control form-control-sm" type="text" name="src" id="src" placeholder="IP Address" required />
+          </div>
+
+          <div class="form-group flex-fill">
+            <label class="form-label required" for="dst">Destination</label>
+            <input class="form-control form-control-sm" type="text" name="dst" id="dst" placeholder="IP Address" required />
+          </div>
+
+          <div class="form-group flex-fill" style="min-width: 220px;">
+            <label class="form-label required" for="protocol">Protocol</label>
+            <select class="form-select" name="protocol" id="protocol" required>
+              <option value="">Select a Protocol</option>
+              <option value="icmp">ICMP</option>
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+            </select>
+          </div>
+
+          <div class="form-group flex-fill">
+            <label class="form-label required" for="port" id="port_label">Port Number</label>
+            <input class="form-control form-control-sm" type="text" name="port" id="port" placeholder="Destination Port" required />
+          </div>
+
+          <div class="for_vpn form-group flex-fill" style="display:none;">
+            <label class="form-label required" for="username">Username</label>
+            <input class="form-control form-control-sm" type="text" name="username" id="username" placeholder="AD User ID" disabled />
+          </div>
+
+          <div class="d-flex" style="height:30px;">
+            <button type="submit" class="btn btn-primary btn-sm">Check Access</button>
+          </div>
+        </div>
+      </form>
+      </div>
+
+      <div class="d-flex justify-content-center mt-3">
+        <svg id="topology"></svg>
+      </div>
+
+    </div>
+{% endblock %}
+
+{% block javascript %}
+  {{ block.super }}
+  <script src="{% static 'netbox_fortigate/base.js' %}"></script>
+  <script src="{% static 'netbox_fortigate/topology.js' %}"></script>
+
+  <script>
+    // keep only UI toggles (not validation)
+    document.getElementById('protocol').addEventListener('change', function() {
+      const port = document.getElementById('port');
+      const label = document.getElementById('port_label');
+
+      if (this.value === 'icmp') {
+        port.value = 8;
+        port.placeholder = 'ICMP Type Number';
+        label.textContent = 'ICMP Type';
+      } else {
+        label.textContent = 'Port Number';
+        port.value = '';
+        port.placeholder = 'Destination Port';
+      }
+    });
+
+    document.getElementById('src').addEventListener('change', function() {
+      const inputValue = this.value || '';
+      const isValid = isIPInRange(inputValue, '172.16.184.0', '172.16.199.255');
+
+      const username = document.getElementById('username');
+      const vpnBlocks = document.querySelectorAll('.for_vpn');
+
+      if (isValid) {
+        username.disabled = false;
+        vpnBlocks.forEach(el => el.style.display = '');
+      } else {
+        username.disabled = true;
+        username.value = '';
+        vpnBlocks.forEach(el => el.style.display = 'none');
+      }
+    });
+
+    function ipToNumber(ip) {
+        return ip.split('.').reduce((acc, octet) => {
+            return (acc << 8) + parseInt(octet, 10);
+        }, 0) >>> 0;
+    }
+
+    function isIPInRange(ip, start, end) {
+        const ipNum = ipToNumber(ip);
+        const startNum = ipToNumber(start);
+        const endNum = ipToNumber(end);
+
+        return ipNum >= startNum && ipNum <= endNum;
+    }
+
+  </script>
+
+  <style>
+    .inner-div { position: relative; }
+    svg#topology { height: 140px; display: block; margin: 0 auto;}
+    .node, .host_label { font-size: 12px; text-anchor: middle; }
+    .label1 { font-size: 11px; text-anchor: start; }
+    .label2 { font-size: 11px; text-anchor: end; }
+    .form-group .ts-wrapper {
+        min-height: 30px;
+        font-size: .75rem;
+        .ts-control {
+            padding: 5px;
+            min-height: 30px;
+        }
+    }
+  </style>
+{% endblock %}
