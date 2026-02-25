@@ -29,14 +29,14 @@ function drawTopology(data, svgElementId) {
         'light': {
             'line': 'green',
             'text': 'black',
-            'node': assets.fortigateDark,
-            'host': assets.host,
+            'node': '/static/netbox_fortigate/img/dark-fortigate.png',
+            'host': '/static/netbox_fortigate/img/host.png',
         },
         'dark': {
             'line': '#00FF00',
             'text': 'white',
-            'node': assets.fortigateLight, 
-            'host': assets.hostLight,
+            'node': '/static/netbox_fortigate/img/light-fortigate.png',
+            'host': '/static/netbox_fortigate/img/host.png',
         }
     }
 
@@ -101,13 +101,14 @@ function drawTopology(data, svgElementId) {
         // Add the circled check or circled X above the node
         if (node.type == 'node') {
             const symbolElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            var symbol = node.status === 'allow' ? '✔️' : '❌'; // Check or X based on status
+            var symbol = node.status === 'allow' ? '✓' : '✗'; // Check or X based on status
             if (node.status === 'unknown') {
-                symbol = '❓';
+                symbol = '?';
             }
             symbolElement.textContent = symbol;
-            symbolElement.setAttribute('x', node.x + 14);
-            symbolElement.setAttribute('y', node.y + 17);  // Above the node
+            symbolElement.setAttribute('x', node.x + 24);
+            symbolElement.setAttribute('y', node.y + 20);  // Above the node
+            symbolElement.setAttribute('fill', node.status === 'allow' ? 'green' : 'red');
             symbolElement.classList.add('node-symbol', node.status); // Add classes for styling
             svg.appendChild(symbolElement);
         }

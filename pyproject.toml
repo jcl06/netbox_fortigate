@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name =  "netbox-fortigate"
 version = "0.1.0"
-description = "FortiGate automation workflow plugin for NetBox"
+description = "Fortigate automation workflow plugin for NetBox"
 
 classifiers=[
     'Intended Audience :: Netbox',

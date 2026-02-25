@@ -2,14 +2,14 @@ import django_tables2 as tables
 
 from netbox.tables import NetBoxTable, columns
 
-from ..models import FortiGateScheduler
+from ..models import Scheduler
 
 __all__ = (
-    "FortiGateSchedulerTable",
+    "SchedulerTable",
 )
 
 
-class FortiGateSchedulerTable(NetBoxTable):
+class SchedulerTable(NetBoxTable):
     name = tables.Column(linkify=True)
     enabled = columns.BooleanColumn()
 
@@ -26,7 +26,7 @@ class FortiGateSchedulerTable(NetBoxTable):
     day_of_month = tables.Column(verbose_name="Day of month")
 
     class Meta(NetBoxTable.Meta):
-        model = FortiGateScheduler
+        model = Scheduler
         fields = (
             "pk",
             "id",

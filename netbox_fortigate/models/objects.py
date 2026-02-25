@@ -21,22 +21,22 @@ from ..choices import *
 
 
 __all__ = (
-    'FortiGateObject',
-    'FortiGateAddress',
-    'FortiGateAddressGroup',
-    'FortiGateService',
-    'FortiGateServiceGroup',
-    'FortiGateVIP',
-    'FortiGateVIPGroup',
-    'FortiGateScheduleOnetime',
-    'FortiGateScheduleRecurring',
-    'FortiGateScheduleGroup',
-    'FortiGateUser',
-    'FortiGateAuthenticationServer'
+    'Object',
+    'Address',
+    'AddressGroup',
+    'Services',
+    'ServiceGroup',
+    'VIP',
+    'VIPGroup',
+    'ScheduleOnetime',
+    'ScheduleRecurring',
+    'ScheduleGroup',
+    'User',
+    'AuthenticationServer'
 )
 
 
-class FortiGateObject(PrimaryModel):
+class Object(PrimaryModel):
     name = models.CharField(max_length=255, blank=True, null=True, editable=False)
 
     object_type = models.ForeignKey(
@@ -47,7 +47,7 @@ class FortiGateObject(PrimaryModel):
     object_id = models.PositiveBigIntegerField()
 
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.PROTECT,
         related_name="fortigate_objects",
     )
@@ -71,8 +71,8 @@ class FortiGateObject(PrimaryModel):
                 name="uniq_fortigate_object_target",
             ),
         ]
-        verbose_name = _("FortiGate Object")
-        verbose_name_plural = _("FortiGate Objects")
+        verbose_name = _("Object")
+        verbose_name_plural = _("Objects")
 
     def __str__(self):
         if self.object and getattr(self.object, "name", None):
@@ -94,10 +94,10 @@ class FortiGateObject(PrimaryModel):
         except model.DoesNotExist:
             raise ValidationError({"object_id": _("Referenced object does not exist.")})
 
-        # Enforce: target belongs to same FortiGateDevice when target has fortigate_id
+        # Enforce: target belongs to same Fortigate when target has fortigate_id
         target_fg_id = getattr(target, "fortigate_id", None)
         if target_fg_id is not None and self.fortigate_id and target_fg_id != self.fortigate_id:
-            raise ValidationError({"fortigate": _("Referenced object belongs to a different FortiGate.")})
+            raise ValidationError({"fortigate": _("Referenced object belongs to a different Fortigate.")})
 
     def save(self, *args, **kwargs):
         if self.object_type_id and self.object_id:
@@ -116,7 +116,7 @@ class FortiGateObject(PrimaryModel):
 
     def intf_obj_with_any(self):
         objs = [self]
-        any_obj = FortiGateObject.objects.filter(
+        any_obj = Object.objects.filter(
             fortigate=self.fortigate,
             name="any",
             enabled=True,
@@ -127,13 +127,13 @@ class FortiGateObject(PrimaryModel):
 
     
     
-class FortiGateAddress(PrimaryModel):
+class Address(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -204,11 +204,11 @@ class FortiGateAddress(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateAddress.objects.filter(
+            Address.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateAddressGroup.objects.filter(
+            AddressGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -245,13 +245,13 @@ class FortiGateAddress(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateAddressGroup(PrimaryModel):
+class AddressGroup(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -265,7 +265,7 @@ class FortiGateAddressGroup(PrimaryModel):
     )
     member = models.ManyToManyField(
         verbose_name=_('member'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['address', 'address group']},
         related_name='%(class)s_member',
         help_text='Address objects contained within the group.'
@@ -295,11 +295,11 @@ class FortiGateAddressGroup(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateAddressGroup.objects.filter(
+            AddressGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateAddress.objects.filter(
+            Address.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -321,13 +321,13 @@ class FortiGateAddressGroup(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateService(PrimaryModel):
+class Services(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -397,11 +397,11 @@ class FortiGateService(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateService.objects.filter(
+            Services.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateServiceGroup.objects.filter(
+            ServiceGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -463,21 +463,21 @@ class FortiGateService(PrimaryModel):
                         raise ValidationError("Port numbers must be integers.")
 
 
-class FortiGateServiceGroup(PrimaryModel):
+class ServiceGroup(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
     )
     member = models.ManyToManyField(
         verbose_name=_('member'),
-        to='netbox_fortigate.FortiGateObject',
-        limit_choices_to={'is_decommissioned': False, 'type__in': ['service', 'servicegroup']},
+        to='netbox_fortigate.Object',
+        limit_choices_to={'is_decommissioned': False, 'type__in': ['service', 'service group']},
         related_name='%(class)s',
         help_text='Service and service group names.',
     )
@@ -505,11 +505,11 @@ class FortiGateServiceGroup(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateServiceGroup.objects.filter(
+            ServiceGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateService.objects.filter(
+            Services.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -531,14 +531,14 @@ class FortiGateServiceGroup(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateVIP(PrimaryModel):
+class VIP(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
         help_text=_('Virtual IP name.')
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -574,7 +574,7 @@ class FortiGateVIP(PrimaryModel):
     )
     external_address = models.ForeignKey(
         verbose_name=_('External Address'),
-        to='netbox_fortigate.FortiGateAddress',
+        to='netbox_fortigate.Address',
         on_delete=models.PROTECT,
         limit_choices_to={'is_decommissioned': False},
         related_name='%(class)s_external_address',
@@ -591,7 +591,7 @@ class FortiGateVIP(PrimaryModel):
         help_text='IP address or address range on the destination network to which the external IP address is mapped.'
     )
     mapped_address = models.ForeignKey(
-        to='netbox_fortigate.FortiGateAddress',
+        to='netbox_fortigate.Address',
         verbose_name=_('Mapped FQDN Address'),
         on_delete=models.PROTECT,
         limit_choices_to={'is_decommissioned': False},
@@ -667,11 +667,11 @@ class FortiGateVIP(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateVIP.objects.filter(
+            VIP.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateVIPGroup.objects.filter(
+            VIPGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -709,7 +709,7 @@ class FortiGateVIP(PrimaryModel):
 
         if isinstance(self.service, list) and self.fortigate:  # Since it's an ArrayField, check if it's a list
             for service_name in self.service:
-                if not FortiGateObject.objects.filter(name=service_name, is_decommissioned=False, fortigate=self.fortigate).exists():
+                if not Object.objects.filter(name=service_name, is_decommissioned=False, fortigate=self.fortigate).exists():
                     raise ValidationError({'member': f'Member {service_name} does not exist or is decommissioned.'})
                 
         # Check for duplicate name
@@ -717,14 +717,14 @@ class FortiGateVIP(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateVIPGroup(PrimaryModel):
+class VIPGroup(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=79,
         help_text=_('Virtual IP name.')
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -737,7 +737,7 @@ class FortiGateVIPGroup(PrimaryModel):
     )
     member = models.ManyToManyField(
         verbose_name=_('Member'),
-        to='netbox_fortigate.FortiGateVIP',
+        to='netbox_fortigate.VIP',
         limit_choices_to={'is_decommissioned': False},
         related_name='%(class)s',
         help_text='External FQDN address name.',
@@ -767,11 +767,11 @@ class FortiGateVIPGroup(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateVIPGroup.objects.filter(
+            VIPGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateVIP.objects.filter(
+            VIP.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -793,13 +793,13 @@ class FortiGateVIPGroup(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateScheduleOnetime(PrimaryModel):
+class ScheduleOnetime(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=31,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -831,15 +831,15 @@ class FortiGateScheduleOnetime(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateScheduleOnetime.objects.filter(
+            ScheduleOnetime.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateScheduleRecurring.objects.filter(
+            ScheduleRecurring.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
             or
-            FortiGateScheduleGroup.objects.filter(
+            ScheduleGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -880,13 +880,13 @@ class FortiGateScheduleOnetime(PrimaryModel):
     
 
 
-class FortiGateScheduleRecurring(PrimaryModel):
+class ScheduleRecurring(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=31,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -924,15 +924,15 @@ class FortiGateScheduleRecurring(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateScheduleRecurring.objects.filter(
+            ScheduleRecurring.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateScheduleOnetime.objects.filter(
+            ScheduleOnetime.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
             or
-            FortiGateScheduleGroup.objects.filter(
+            ScheduleGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -966,20 +966,20 @@ class FortiGateScheduleRecurring(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateScheduleGroup(PrimaryModel):
+class ScheduleGroup(PrimaryModel):
     name = models.CharField(
         verbose_name=_('name'),
         max_length=31,
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
     )
     member = models.ManyToManyField(
         verbose_name=_('member'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['schedule onetime', 'schedule recurring']},
         related_name='%(class)s_member',
         help_text='Schedules added to the schedule group.'
@@ -1003,15 +1003,15 @@ class FortiGateScheduleGroup(PrimaryModel):
 
     def get_duplicate_name(self):
         return (
-            FortiGateScheduleGroup.objects.filter(
+            ScheduleGroup.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateScheduleRecurring.objects.filter(
+            ScheduleRecurring.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
             or
-            FortiGateScheduleOnetime.objects.filter(
+            ScheduleOnetime.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -1034,9 +1034,9 @@ class FortiGateScheduleGroup(PrimaryModel):
         
     
 
-class FortiGateUser(PrimaryModel):
+class User(PrimaryModel):
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -1058,7 +1058,7 @@ class FortiGateUser(PrimaryModel):
         default='enable'
     )
     server = models.ForeignKey(
-        to='netbox_fortigate.FortiGateAuthenticationServer',
+        to='netbox_fortigate.AuthenticationServer',
         verbose_name=_('authentication server'),
         on_delete=models.SET_NULL,
         related_name='%(class)s',
@@ -1087,11 +1087,11 @@ class FortiGateUser(PrimaryModel):
     
     def get_duplicate_name(self):
         return (
-            FortiGateUser.objects.filter(
+            User.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateAuthenticationServer.objects.filter(
+            AuthenticationServer.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )
@@ -1125,9 +1125,9 @@ class FortiGateUser(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateAuthenticationServer(PrimaryModel):
+class AuthenticationServer(PrimaryModel):
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -1171,11 +1171,11 @@ class FortiGateAuthenticationServer(PrimaryModel):
     
     def get_duplicate_name(self):
         return (
-            FortiGateAuthenticationServer.objects.filter(
+            AuthenticationServer.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exclude(pk=self.pk).exists()
             or
-            FortiGateUser.objects.filter(
+            User.objects.filter(
                 name=self.name, fortigate=self.fortigate, is_decommissioned=False
             ).exists()
         )

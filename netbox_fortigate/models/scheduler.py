@@ -11,11 +11,11 @@ from netbox.models import PrimaryModel, JobsMixin
 from ..choices import *
 
 __all__ =(
-    "FortiGateScheduler",
+    "Scheduler",
 )
 
 
-class FortiGateScheduler(PrimaryModel, JobsMixin):
+class Scheduler(PrimaryModel, JobsMixin):
     """
     A cron-like schedule for plugin automation.
 
@@ -94,7 +94,7 @@ class FortiGateScheduler(PrimaryModel, JobsMixin):
     # timezone = models.CharField(max_length=64, default="UTC")
 
     def get_absolute_url(self):
-        return reverse('plugins:netbox_fortigate:fortigatescheduler', args=[self.pk])
+        return reverse('plugins:netbox_fortigate:scheduler', args=[self.pk])
 
 
     class Meta:

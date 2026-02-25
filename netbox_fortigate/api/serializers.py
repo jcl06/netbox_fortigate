@@ -3,38 +3,38 @@ from netbox.api.serializers import NetBoxModelSerializer
 from ..models import *
 
 
-class FortiGateDeviceSerializer(NetBoxModelSerializer):
+class FortigateSerializer(NetBoxModelSerializer):
     class Meta:
-        model = FortiGateDevice
+        model = Fortigate
         fields = "__all__"
 
 
 
-class FortiGateInterfaceSerializer(NetBoxModelSerializer):
+class InterfacesSerializer(NetBoxModelSerializer):
     class Meta:
-        model = FortiGateInterface
+        model = Interfaces
         fields = "__all__"
 
 
-# class FortiGateZoneSerializer(NetBoxModelSerializer):
+# class ZoneSerializer(NetBoxModelSerializer):
 #     class Meta:
-#         model = FortiGateZone
+#         model = Zone
 #         fields = "__all__"
 
 
-class FortiGateRouteSerializer(NetBoxModelSerializer):
+class RoutingTableSerializer(NetBoxModelSerializer):
     class Meta:
-        model = FortiGateRoute
+        model = RoutingTable
         fields = "__all__"
 
 
-# class FortiGateObjectSerializer(NetBoxModelSerializer):
+# class ObjectSerializer(NetBoxModelSerializer):
 #     class Meta:
-#         model = FortiGateObject
+#         model = Object
 #         fields = "__all__"
 
 
-class FortiGateSchedulerSerializer(NetBoxModelSerializer):
+class SchedulerSerializer(NetBoxModelSerializer):
     class Meta:
-        model = FortiGateScheduler
+        model = Scheduler
         fields = "__all__"

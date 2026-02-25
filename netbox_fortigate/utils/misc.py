@@ -23,7 +23,7 @@ __all__ = (
 )
 
 def getInterfaces(fortigate_id):
-    data = FortiGateInterface.objects.all().filter(is_decommissioned=False)
+    data = Interfaces.objects.all().filter(is_decommissioned=False)
     if fortigate_id:
         data = data.filter(device__id=fortigate_id)
     return data
@@ -41,7 +41,7 @@ def find_route(address, device=None, interface=None, type=None, src=None):
     found = False
     try:
         logger.info(f'Looking for {address} {f'in {str(device)} routing table' if device else ''}')
-        result = FortiGateRoute.objects.filter(route__net_contains_or_equals=address)
+        result = RoutingTable.objects.filter(route__net_contains_or_equals=address)
         if device:
             result = result.filter(interface__fortigate=device)
         if interface:
@@ -417,8 +417,8 @@ def ordered(obj):
 
 
 class NetworkPathResolver:
-    def _find_route(self, address, device: Optional[FortiGateDevice]=None, destination: Optional[str]=None, connected: Optional[bool]=False):
-        queryset = FortiGateRoute.objects.filter(route__net_contains_or_equals=address)
+    def _find_route(self, address, device: Optional[Fortigate]=None, destination: Optional[str]=None, connected: Optional[bool]=False):
+        queryset = RoutingTable.objects.filter(route__net_contains_or_equals=address)
 
         if device:
             queryset = queryset.filter(fortigate=device)
@@ -447,7 +447,7 @@ class NetworkPathResolver:
             queryset = queryset.exclude(next_hop__isnull=False)
 
         if not queryset.exists():
-            return FortiGateRoute.objects.none()
+            return RoutingTable.objects.none()
 
         candidates = queryset.order_by('-route', 'distance', 'metric')
         best_score = (-candidates[0].route.prefixlen, candidates[0].distance, candidates[0].metric)
@@ -471,7 +471,7 @@ class NetworkPathResolver:
 
         return routes
 
-    def _find_direct_routes(self, routes: List[FortiGateRoute], destination: str) -> List[FortiGateRoute]:
+    def _find_direct_routes(self, routes: List[RoutingTable], destination: str) -> List[RoutingTable]:
             valid_routes = []
             for route in routes:
                 best_routes = self._find_route(destination, device=route.fortigate, connected=True)
@@ -481,7 +481,7 @@ class NetworkPathResolver:
                         continue
             return valid_routes
 
-    def _find_shortest_path(self, routes: List[FortiGateRoute], destination: str) -> List[FortiGateRoute]:
+    def _find_shortest_path(self, routes: List[RoutingTable], destination: str) -> List[RoutingTable]:
         hops = set()
         data = {}
         for route in routes:
@@ -498,7 +498,7 @@ class NetworkPathResolver:
 
         return data[sorted(hops)[0]]
 
-    def _trace_routes(self, device, destination_ip: str, visited: set, path_map: dict, incoming_interfaces: Optional[List[FortiGateInterface]] = None) -> Dict:
+    def _trace_routes(self, device, destination_ip: str, visited: set, path_map: dict, incoming_interfaces: Optional[List[Interfaces]] = None) -> Dict:
         if device in visited:
             return {"error": f"Loop detected at device {str(device)}"}
 
@@ -529,7 +529,7 @@ class NetworkPathResolver:
 
         return path_map
 
-    def resolve_path(self, source_ip: str, destination_ip: str) -> Dict[FortiGateDevice, Dict[str, List[FortiGateInterface]]]:
+    def resolve_path(self, source_ip: str, destination_ip: str) -> Dict[Fortigate, Dict[str, List[Interfaces]]]:
         visited = set()
         path_map = {}
 

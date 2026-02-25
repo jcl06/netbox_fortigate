@@ -5,17 +5,17 @@ from netbox.tables import NetBoxTable
 from ..models import *
 
 __all__ = (
-    "FortiGateObjectTable",
+    "ObjectTable",
 )
 
 
-class FortiGateObjectTable(NetBoxTable):
+class ObjectTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     object_type = tables.Column()
     object_id = tables.Column()
 
     class Meta(NetBoxTable.Meta):
-        model = FortiGateObject
+        model = Object
         fields = (
             "pk",
             "name",

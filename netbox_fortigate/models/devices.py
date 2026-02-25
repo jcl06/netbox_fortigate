@@ -12,13 +12,13 @@ from netbox_fortigate.utils.settings import get_plugin_default
 from django.core.validators import RegexValidator
 
 __all__ = (
-    "FortiGateDevice",
-    "FortiGateInterface",
-    "FortiGateRoute",
-    "FortiGateZone",
+    "Fortigate",
+    "Interfaces",
+    "RoutingTable",
+    "Zone",
     "default_api_port",
     "default_ssh_port",
-    # "FortiGateObject"
+    # "Object"
 )
 
 
@@ -36,7 +36,7 @@ def default_ssh_port():
     return get_plugin_default("default_ssh_port", 22) or 22
 
 
-class FortiGateDevice(PrimaryModel, JobsMixin):
+class Fortigate(PrimaryModel, JobsMixin):
     device = models.OneToOneField(
         to='dcim.Device',
         on_delete=models.PROTECT,
@@ -48,7 +48,7 @@ class FortiGateDevice(PrimaryModel, JobsMixin):
     role = models.CharField(
         max_length=64,
         default="firewall",
-        help_text=_("FortiGate plugin role key (e.g. user_vpn). Defaults from linked Device.role on creation."),
+        help_text=_("Fortigate plugin role key (e.g. user_vpn). Defaults from linked Device.role on creation."),
     )
 
     mgmt_ip = models.ForeignKey(
@@ -58,7 +58,7 @@ class FortiGateDevice(PrimaryModel, JobsMixin):
         related_name="+",
         blank=True,
         null=True,
-        help_text=_("NetBox IPAddress object used to reach this FortiGate (override)."),
+        help_text=_("NetBox IPAddress object used to reach this Fortigate (override)."),
     )
 
     priority = models.PositiveSmallIntegerField(default=1)
@@ -74,8 +74,8 @@ class FortiGateDevice(PrimaryModel, JobsMixin):
 
     class Meta:
         ordering = ("device__name",)
-        verbose_name = _("Firewall")
-        verbose_name_plural = _("Firewalls")
+        verbose_name = _("fortigate")
+        verbose_name_plural = _("fortigates")
 
     def __str__(self) -> str:
         return self.device.name
@@ -124,9 +124,9 @@ class FortiGateDevice(PrimaryModel, JobsMixin):
     #     return reverse('netbox_fortigate:fortigatedevice', args=[self.pk])
 
 
-class FortiGateInterface(PrimaryModel):
+class Interfaces(PrimaryModel):
     fortigate = models.ForeignKey(
-        to=FortiGateDevice,
+        to=Fortigate,
         on_delete=models.PROTECT,
         related_name="interfaces",
     )
@@ -175,7 +175,7 @@ class FortiGateInterface(PrimaryModel):
         max_length=8,
         choices=(("up", "Up"), ("down", "Down")),
         default="down",
-        help_text=_("Interface status"),
+        help_text=_("Interfaces status"),
     )
 
     is_decommissioned = models.BooleanField(verbose_name=_("decommissioned"), default=False)
@@ -185,8 +185,8 @@ class FortiGateInterface(PrimaryModel):
             models.UniqueConstraint(fields=("fortigate", "name"), name="uniq_fg_if_name"),
         ]
         ordering = ("fortigate__device__name", "name")
-        verbose_name = _("Firewall Interface")
-        verbose_name_plural = _("Firewall Interfaces")
+        verbose_name = _("interface")
+        verbose_name_plural = _("interfaces")
 
     @property
     def parent_object(self):
@@ -199,7 +199,7 @@ class FortiGateInterface(PrimaryModel):
 
     @property
     def zone(self):
-        # This M2M is defined on FortiGateZone.interface with related_name="zones"
+        # This M2M is defined on Zone.interface with related_name="zones"
         return self.zones.first()
 
     @property
@@ -207,29 +207,29 @@ class FortiGateInterface(PrimaryModel):
         return self.fortigate.device
 
     def __str__(self):
-        return f"{self.device} - {self.name}"
+        return self.name
 
     def clean(self):
         super().clean()
 
         if not self.fortigate_id:
-            raise ValidationError({"fortigate": _("FortiGate device is required.")})
+            raise ValidationError({"fortigate": _("Fortigate device is required.")})
 
         # /0 masks are not acceptable
         if self.ip and getattr(self.ip, "prefixlen", None) == 0:
             raise ValidationError({"ip": _("Cannot create IP address with /0 mask.")})
 
-        # Duplicate IP (only enforce when enabled and IP set; scoped to the same FortiGateDevice)
+        # Duplicate IP (only enforce when enabled and IP set; scoped to the same Fortigate)
         if self.enabled and self.ip:
-            if FortiGateInterface.objects.filter(
+            if Interfaces.objects.filter(
                 fortigate_id=self.fortigate_id,
                 enabled=True,
                 ip=self.ip,
             ).exclude(pk=self.pk).exists():
-                raise ValidationError({"ip": _("Duplicate IP address found on this FortiGate.")})
+                raise ValidationError({"ip": _("Duplicate IP address found on this Fortigate.")})
 
-        # Optional: prevent interface name clashing with a zone name on same FortiGate
-        if self.name and FortiGateZone.objects.filter(
+        # Optional: prevent interface name clashing with a zone name on same Fortigate
+        if self.name and Zone.objects.filter(
             fortigate_id=self.fortigate_id,
             name=self.name,
         ).exclude(pk=getattr(self, "pk", None)).exists():
@@ -237,11 +237,11 @@ class FortiGateInterface(PrimaryModel):
 
 
 
-class FortiGateZone(PrimaryModel):
+class Zone(PrimaryModel):
     name = models.CharField(max_length=35)
 
     fortigate = models.ForeignKey(
-        to=FortiGateDevice,
+        to=Fortigate,
         on_delete=models.PROTECT,
         related_name="zones",
     )
@@ -260,7 +260,7 @@ class FortiGateZone(PrimaryModel):
     )
 
     interface = models.ManyToManyField(
-        to=FortiGateInterface,
+        to=Interfaces,
         related_name="zones",
         blank=True,
     )
@@ -272,27 +272,27 @@ class FortiGateZone(PrimaryModel):
         constraints = [
             models.UniqueConstraint(fields=("fortigate", "name"), name="uniq_fg_zone_name"),
         ]
-        verbose_name = _("Firewall Zone")
-        verbose_name_plural = _("Firewall Zones")
+        verbose_name = _("zone")
+        verbose_name_plural = _("zones")
 
     def __str__(self):
-        return f"{self.fortigate.device} - {self.name}"
+        return self.name
 
     def clean(self):
         super().clean()
 
         if not self.fortigate_id:
-            raise ValidationError({"fortigate": _("FortiGate device is required.")})
+            raise ValidationError({"fortigate": _("Fortigate device is required.")})
 
-        # Zone name must be unique for this FortiGate
-        if self.name and FortiGateZone.objects.filter(
+        # Zone name must be unique for this Fortigate
+        if self.name and Zone.objects.filter(
             fortigate_id=self.fortigate_id,
             name=self.name,
         ).exclude(pk=self.pk).exists():
             raise ValidationError({"name": _("Found duplicate zone name.")})
 
-        # Prevent zone name clashing with an interface name on same FortiGate
-        if self.name and FortiGateInterface.objects.filter(
+        # Prevent zone name clashing with an interface name on same Fortigate
+        if self.name and Interfaces.objects.filter(
             fortigate_id=self.fortigate_id,
             name=self.name,
         ).exclude(pk=None).exists():
@@ -300,7 +300,7 @@ class FortiGateZone(PrimaryModel):
 
 
 
-class FortiGateRoute(PrimaryModel):
+class RoutingTable(PrimaryModel):
     route = IPNetworkField(
         verbose_name=_("Route"),
         help_text=_("IPv4/IPv6 network with mask (CIDR)"),
@@ -312,8 +312,8 @@ class FortiGateRoute(PrimaryModel):
     )
 
     fortigate = models.ForeignKey(
-        verbose_name=_("FortiGate"),
-        to=FortiGateDevice,
+        verbose_name=_("Fortigate"),
+        to=Fortigate,
         on_delete=models.PROTECT,
         related_name="routes",
     )
@@ -333,7 +333,7 @@ class FortiGateRoute(PrimaryModel):
 
     next_hop = models.ForeignKey(
         verbose_name=_("Next hop"),
-        to=FortiGateDevice,
+        to=Fortigate,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
@@ -341,7 +341,7 @@ class FortiGateRoute(PrimaryModel):
     )
 
     interface = models.ForeignKey(
-        to=FortiGateInterface,
+        to=Interfaces,
         on_delete=models.PROTECT,
         related_name="routes",
     )
@@ -368,24 +368,24 @@ class FortiGateRoute(PrimaryModel):
         verbose_name_plural = _("routing table")
 
     def get_absolute_url(self):
-        return f'{reverse("plugins:netbox_fortigate:fortigateroute_list")}?prefix={self.route}'
+        return f'{reverse("plugins:netbox_fortigate:routingtable_list")}?prefix={self.route}'
 
     @property
     def device(self):
         return self.fortigate.device
 
     def __str__(self):
-        return f"{self.device} - {self.route}"
+        return self.route
 
     def clean(self):
         super().clean()
 
         if not self.fortigate_id:
-            raise ValidationError({"fortigate": _("FortiGate is required.")})
+            raise ValidationError({"fortigate": _("Fortigate is required.")})
 
-        # Ensure interface belongs to the same FortiGate
+        # Ensure interface belongs to the same Fortigate
         if self.interface_id and self.interface.fortigate_id != self.fortigate_id:
-            raise ValidationError({"interface": _("Interface must belong to the same FortiGate.")})
+            raise ValidationError({"interface": _("Interface must belong to the same Fortigate.")})
 
         # Enforce gateway family matches version (basic sanity)
         if self.gateway:
@@ -395,9 +395,9 @@ class FortiGateRoute(PrimaryModel):
             if self.version == 6 and gw_family != 6:
                 raise ValidationError({"gateway": _("Gateway must be IPv6 for version 6 routes.")})
 
-        # Auto-derive next_hop if gateway matches exactly one FortiGateInterface IP in our plugin cache
+        # Auto-derive next_hop if gateway matches exactly one Interface IP in our plugin cache
         if self.gateway:
-            matches = FortiGateInterface.objects.filter(
+            matches = Interfaces.objects.filter(
                 enabled=True,
                 ip__net_host=str(self.gateway),
             )
@@ -410,9 +410,9 @@ class FortiGateRoute(PrimaryModel):
     def validate_unique(self, *args, **kwargs):
         super().validate_unique(*args, **kwargs)
 
-        # Legacy behavior: for connected routes, route must be unique (per FortiGate) among connect routes
+        # Legacy behavior: for connected routes, route must be unique (per Fortigate) among connect routes
         if self.enabled and self.type == "connect":
-            q = FortiGateRoute.objects.filter(
+            q = RoutingTable.objects.filter(
                 fortigate_id=self.fortigate_id,
                 route=self.route,
                 type="connect",
@@ -428,7 +428,7 @@ class FortiGateRoute(PrimaryModel):
     def next_hop_interface(self):
         if not self.gateway:
             return None
-        matches = FortiGateInterface.objects.filter(
+        matches = Interfaces.objects.filter(
             enabled=True,
             ip__net_host=str(self.gateway),
         )

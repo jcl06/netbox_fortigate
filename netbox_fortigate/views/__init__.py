@@ -13,59 +13,62 @@ from dcim.models import Device
 
 from .. import forms, tables, filtersets
 from ..models import *
-from ..jobs import FortiGateInventoryPullRunner, FortiGateRequestRunner
+from ..jobs import InventoryPullRunner, RequestRunner
 from ..choices import JobTypeChoices
 
 
-class FortiGateDeviceListView(generic.ObjectListView):
-    queryset = FortiGateDevice.objects.all()
-    table = tables.FortiGateDeviceTable
-    filterset = filtersets.FortiGateDeviceFilterSet
+@register_model_view(Fortigate, 'list', path='', detail=False)
+class FortigateListView(generic.ObjectListView):
+    queryset = Fortigate.objects.all()
+    table = tables.FortigateTable
+    filterset = filtersets.FortigateFilterSet
 
 
-@register_model_view(FortiGateDevice)
-class FortiGateDeviceView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateDevice.objects.all()
+@register_model_view(Fortigate)
+class FortigateView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Fortigate.objects.all()
 
     def get_extra_context(self, request, instance):
         return {
             'related_models': self.get_related_models(request, instance),
         }
 
-@register_model_view(FortiGateDevice, 'edit')
-class FortiGateDeviceEditView(generic.ObjectEditView):
-    queryset = FortiGateDevice.objects.all()
-    form = forms.FortiGateDeviceForm
+@register_model_view(Fortigate, 'add', detail=False)
+@register_model_view(Fortigate, 'edit')
+class FortigateEditView(generic.ObjectEditView):
+    queryset = Fortigate.objects.all()
+    form = forms.FortigateForm
 
-@register_model_view(FortiGateDevice, 'delete')
-class FortiGateDeviceDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateDevice.objects.all()
+@register_model_view(Fortigate, 'delete')
+class FortigateDeleteView(generic.ObjectDeleteView):
+    queryset = Fortigate.objects.all()
 
+@register_model_view(Fortigate, 'bulk_delete', path='delete', detail=False)
+class FortigateBulkDeleteView(generic.BulkDeleteView):
+    queryset = Fortigate.objects.all()
+    filterset = filtersets.FortigateFilterSet
+    table = tables.FortigateTable
 
-class FortiGateDeviceBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateDevice.objects.all()
-    filterset = filtersets.FortiGateDeviceFilterSet
-    table = tables.FortiGateDeviceTable
-
-class FortiGateDeviceBulkImportView(generic.BulkImportView):
-    queryset = FortiGateDevice.objects.all()
-    model_form = forms.FortiGateDeviceImportForm
+@register_model_view(Fortigate, 'bulk_import', path='import', detail=False)
+class FortigateBulkImportView(generic.BulkImportView):
+    queryset = Fortigate.objects.all()
+    model_form = forms.FortigateImportForm
     
 
 
-class FortiGateInterfaceListView(generic.ObjectListView):
-    queryset = FortiGateInterface.objects.all()
-    table = tables.FortiGateInterfaceTable
-    filterset = filtersets.FortiGateInterfaceFilterSet
+class InterfacesListView(generic.ObjectListView):
+    queryset = Interfaces.objects.all()
+    table = tables.InterfacesTable
+    filterset = filtersets.InterfacesFilterSet
     actions = (BulkExport, BulkDelete)
 
-@register_model_view(FortiGateInterface)
-class FortiGateInterfaceView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateInterface.objects.all()
+@register_model_view(Interfaces)
+class InterfacesView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Interfaces.objects.all()
 
     def get_extra_context(self, request, instance):
-        child_interfaces = FortiGateInterface.objects.restrict(request.user, 'view').filter(parent=instance)
-        child_interfaces_table = tables.FortiGateInterfaceTable(
+        child_interfaces = Interfaces.objects.restrict(request.user, 'view').filter(parent=instance)
+        child_interfaces_table = tables.InterfacesTable(
             child_interfaces,
             exclude=('fortigate__device', 'parent'),
             orderable=False
@@ -77,29 +80,29 @@ class FortiGateInterfaceView(GetRelatedModelsMixin, generic.ObjectView):
             'child_interfaces_table': child_interfaces_table,
         }
 
-@register_model_view(FortiGateInterface, 'delete')
-class FortiGateInterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateInterface.objects.all()
+@register_model_view(Interfaces, 'delete')
+class InterfacesDeleteView(generic.ObjectDeleteView):
+    queryset = Interfaces.objects.all()
 
-class FortiGateInterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateInterface.objects.all()
-    filterset = filtersets.FortiGateInterfaceFilterSet
-    table = tables.FortiGateInterfaceTable
+class InterfacesBulkDeleteView(generic.BulkDeleteView):
+    queryset = Interfaces.objects.all()
+    filterset = filtersets.InterfacesFilterSet
+    table = tables.InterfacesTable
 
 
-class FortiGateZoneListView(generic.ObjectListView):
-    queryset = FortiGateZone.objects.all()
-    table = tables.FortiGateZoneTable
-    filterset = filtersets.FortiGateZoneFilterSet
+class ZoneListView(generic.ObjectListView):
+    queryset = Zone.objects.all()
+    table = tables.ZoneTable
+    filterset = filtersets.ZoneFilterSet
     actions = (BulkExport, BulkDelete)
 
-@register_model_view(FortiGateZone)
-class FortiGateZoneView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateZone.objects.all()
+@register_model_view(Zone)
+class ZoneView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Zone.objects.all()
     
     def get_extra_context(self, request, instance):
         interfaces = instance.interface.all()
-        interfaces_table = tables.FortiGateInterfaceTable(
+        interfaces_table = tables.InterfacesTable(
             interfaces,
             exclude=('fortigate__device',),
             orderable=False
@@ -111,42 +114,42 @@ class FortiGateZoneView(GetRelatedModelsMixin, generic.ObjectView):
             'interfaces_count': interfaces.count(),
         }
 
-@register_model_view(FortiGateZone, 'delete')
-class FortiGateZoneDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateZone.objects.all()
+@register_model_view(Zone, 'delete')
+class ZoneDeleteView(generic.ObjectDeleteView):
+    queryset = Zone.objects.all()
 
-class FortiGateZoneBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateZone.objects.all()
-    filterset = filtersets.FortiGateZoneFilterSet
-    table = tables.FortiGateZoneTable
+class ZoneBulkDeleteView(generic.BulkDeleteView):
+    queryset = Zone.objects.all()
+    filterset = filtersets.ZoneFilterSet
+    table = tables.ZoneTable
 
-class FortiGateRouteListView(generic.ObjectListView):
-    queryset = FortiGateRoute.objects.all()
-    table = tables.FortiGateRouteTable
-    filterset = filtersets.FortiGateRouteFilterSet
+class RoutingTableListView(generic.ObjectListView):
+    queryset = RoutingTable.objects.all()
+    table = tables.RoutingTableTable
+    filterset = filtersets.RoutingTableFilterSet
     actions = (BulkExport, BulkDelete)
     
 
-@register_model_view(FortiGateRoute, 'delete')
-class FortiGateRouteDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateRoute.objects.all()
+@register_model_view(RoutingTable, 'delete')
+class RoutingTableDeleteView(generic.ObjectDeleteView):
+    queryset = RoutingTable.objects.all()
 
 
-class FortiGateRouteBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateRoute.objects.all()
-    filterset = filtersets.FortiGateRouteFilterSet
-    table = tables.FortiGateRouteTable
+class RoutingTableBulkDeleteView(generic.BulkDeleteView):
+    queryset = RoutingTable.objects.all()
+    filterset = filtersets.RoutingTableFilterSet
+    table = tables.RoutingTableTable
 
-class FortiGateObjectListView(generic.ObjectListView):
-    queryset = FortiGateObject.objects.all()
-    table = tables.FortiGateObjectTable
-    filterset = filtersets.FortiGateObjectFilterSet
-    filterset_form = forms.FortiGateObjectFilterForm
+class ObjectListView(generic.ObjectListView):
+    queryset = Object.objects.all()
+    table = tables.ObjectTable
+    filterset = filtersets.ObjectFilterSet
+    filterset_form = forms.ObjectFilterForm
 
 
-@register_model_view(FortiGateObject)
-class FortiGateObjectView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateObject.objects.all()
+@register_model_view(Object)
+class ObjectView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Object.objects.all()
 
     def get_extra_context(self, request, instance):
         return {
@@ -154,36 +157,36 @@ class FortiGateObjectView(GetRelatedModelsMixin, generic.ObjectView):
         }
     
 
-@register_model_view(FortiGateObject, 'delete')
-class FortiGateObjectDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateObject.objects.all()
+@register_model_view(Object, 'delete')
+class ObjectDeleteView(generic.ObjectDeleteView):
+    queryset = Object.objects.all()
 
 
 class FortiGatObjectBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateObject.objects.all()
-    filterset = filtersets.FortiGateObjectFilterSet
-    table = tables.FortiGateObjectTable
+    queryset = Object.objects.all()
+    filterset = filtersets.ObjectFilterSet
+    table = tables.ObjectTable
 
 
 
 def requests_placeholder(request):
-    return HttpResponse("netbox_fortigate: OK (FortiGate requests placeholder)")
+    return HttpResponse("netbox_fortigate: OK (Fortigate requests placeholder)")
 
 
 
-class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
-    queryset = FortiGateScheduler.objects.all()
+class ScheduleRunNowView(ObjectPermissionRequiredMixin, View):
+    queryset = Scheduler.objects.all()
 
     def get_required_permission(self):
-        return "netbox_fortigate.change_fortigatescheduler"
+        return "netbox_fortigate.change_scheduler"
 
     def post(self, request, pk: int):
         schedule = get_object_or_404(self.queryset, pk=pk)
 
         runner = (
-            FortiGateInventoryPullRunner
+            InventoryPullRunner
             if schedule.job_type == JobTypeChoices.INVENTORY_PULL
-            else FortiGateRequestRunner
+            else RequestRunner
         )
 
         runner.enqueue(
@@ -205,15 +208,15 @@ class FortiGateScheduleRunNowView(ObjectPermissionRequiredMixin, View):
     
 
 
-class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
-    queryset = FortiGateDevice.objects.all()
+class FortigatePullInventoryView(ObjectPermissionRequiredMixin, View):
+    queryset = Fortigate.objects.all()
 
     def get_required_permission(self):
         return "dcim.change_device"
 
     def get_object(self, parent: int | None = None, **kwargs):
         """
-        Return an object for editing. If parent is provided, resolve the FortiGateDevice.
+        Return an object for editing. If parent is provided, resolve the Fortigate.
         Otherwise resolve the core Device.
         """
         if parent:
@@ -232,10 +235,10 @@ class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
         device = get_object_or_404(Device, fortigate=fg)
 
         # Enqueue job and then persist job.data explicitly
-        FortiGateInventoryPullRunner.enqueue(
+        InventoryPullRunner.enqueue(
             instance=fg,
             user=request.user,
-            name=f"{FortiGateInventoryPullRunner.name}: {device.name}",
+            name=f"{InventoryPullRunner.name}: {device.name}",
             fg_id=fg.pk,
             data={
                 "trigger": "manual",
@@ -249,22 +252,22 @@ class FortiGateDevicePullInventoryView(ObjectPermissionRequiredMixin, View):
         return redirect(obj.get_absolute_url())
 
 
-class FortiGateScheduleListView(generic.ObjectListView):
-    queryset = FortiGateScheduler.objects.all()
-    table = tables.FortiGateSchedulerTable
-    filterset = filtersets.FortiGateSchedulerFilterSet
+class ScheduleListView(generic.ObjectListView):
+    queryset = Scheduler.objects.all()
+    table = tables.SchedulerTable
+    filterset = filtersets.SchedulerFilterSet
 
 
-@register_model_view(FortiGateScheduler)
-class FortiGateScheduleView(GetRelatedModelsMixin, generic.ObjectView):
-    queryset = FortiGateScheduler.objects.all()
+@register_model_view(Scheduler)
+class ScheduleView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Scheduler.objects.all()
 
     def get_extra_context(self, request, instance):
         # Show jobs related to THIS schedule, for the correct runner based on job_type
         if instance.job_type == JobTypeChoices.INVENTORY_PULL:
-            runner = FortiGateInventoryPullRunner
+            runner = InventoryPullRunner
         else:
-            runner = FortiGateRequestRunner
+            runner = RequestRunner
 
         return {
             # "jobs": jobs,
@@ -272,30 +275,30 @@ class FortiGateScheduleView(GetRelatedModelsMixin, generic.ObjectView):
         }
 
 
-@register_model_view(FortiGateScheduler, 'edit')
-class FortiGateScheduleEditView(generic.ObjectEditView):
-    queryset = FortiGateScheduler.objects.all()
-    form = forms.FortiGateSchedulerForm
+@register_model_view(Scheduler, 'edit')
+class ScheduleEditView(generic.ObjectEditView):
+    queryset = Scheduler.objects.all()
+    form = forms.SchedulerForm
 
-@register_model_view(FortiGateScheduler, 'delete')
-class FortiGateScheduleDeleteView(generic.ObjectDeleteView):
-    queryset = FortiGateScheduler.objects.all()
+@register_model_view(Scheduler, 'delete')
+class ScheduleDeleteView(generic.ObjectDeleteView):
+    queryset = Scheduler.objects.all()
 
-class FortiGateScheduleBulkDeleteView(generic.BulkDeleteView):
-    queryset = FortiGateScheduler.objects.all()
-    filterset = filtersets.FortiGateSchedulerFilterSet
-    table = tables.FortiGateSchedulerTable
+class ScheduleBulkDeleteView(generic.BulkDeleteView):
+    queryset = Scheduler.objects.all()
+    filterset = filtersets.SchedulerFilterSet
+    table = tables.SchedulerTable
 
 
-class FortiGateSchedulerJobsView(generic.ObjectJobsView):
+class SchedulerJobsView(generic.ObjectJobsView):
     def get_jobs(self, instance):
         object_type = ContentType.objects.get_for_model(instance)
         qs = Job.objects.filter(object_type=object_type, object_id=instance.id)
 
         # Optional: filter by runner names if you want
         return qs.filter(name__in=[
-            FortiGateInventoryPullRunner.name,
-            FortiGateRequestRunner.name,
+            InventoryPullRunner.name,
+            RequestRunner.name,
         ])
     
 

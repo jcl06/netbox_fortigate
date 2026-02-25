@@ -6,19 +6,19 @@ from netbox.tables import NetBoxTable, columns
 from ..models import *
 
 __all__ = (
-    "FortiGateDeviceTable",
-    "FortiGateInterfaceTable",
-    "FortiGateZoneTable",
-    "FortiGateRouteTable",
+    "FortigateTable",
+    "InterfacesTable",
+    "ZoneTable",
+    "RoutingTableTable",
 )
 
-class FortiGateDeviceTable(NetBoxTable):
+class FortigateTable(NetBoxTable):
     id = tables.Column(linkify=True)
     device = tables.Column(linkify=True)
     role = tables.Column()
 
     class Meta(NetBoxTable.Meta):
-        model = FortiGateDevice
+        model = Fortigate
         fields = (
             "pk",
             "id",
@@ -36,7 +36,7 @@ class FortiGateDeviceTable(NetBoxTable):
 
 
 
-class FortiGateInterfaceTable(NetBoxTable):
+class InterfacesTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
@@ -45,7 +45,7 @@ class FortiGateInterfaceTable(NetBoxTable):
     )
 
     class Meta(NetBoxTable.Meta):
-        model = FortiGateInterface
+        model = Interfaces
         fields = (
             "pk",
             "name",
@@ -61,7 +61,7 @@ class FortiGateInterfaceTable(NetBoxTable):
         )
 
 
-class FortiGateZoneTable(NetBoxTable):
+class ZoneTable(NetBoxTable):
     fortigate = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
     actions = columns.ActionsColumn(
@@ -69,7 +69,7 @@ class FortiGateZoneTable(NetBoxTable):
     )
 
     class Meta(NetBoxTable.Meta):
-        model = FortiGateZone
+        model = Zone
         fields = (
             "pk",
             "name",
@@ -81,7 +81,7 @@ class FortiGateZoneTable(NetBoxTable):
 
 
 
-class FortiGateRouteTable(NetBoxTable):
+class RoutingTableTable(NetBoxTable):
     route = tables.Column(linkify=True)
     fortigate = tables.Column(linkify=True)
     interface = tables.Column(linkify=True)
@@ -90,7 +90,7 @@ class FortiGateRouteTable(NetBoxTable):
         actions=('delete',) 
     )
     class Meta(NetBoxTable.Meta):
-        model = FortiGateRoute
+        model = RoutingTable
         fields = (
             "pk",
             "route",

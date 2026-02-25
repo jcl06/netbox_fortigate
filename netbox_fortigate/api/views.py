@@ -6,38 +6,38 @@ from . import serializers
 
 
 
-class FortiGateDeviceViewSet(NetBoxModelViewSet):
-    queryset = models.FortiGateDevice.objects.select_related("device").all()
-    serializer_class = serializers.FortiGateDeviceSerializer
-    filterset_class =  filtersets.FortiGateDeviceFilterSet
+class FortigateViewSet(NetBoxModelViewSet):
+    queryset = models.Fortigate.objects.select_related("device").all()
+    serializer_class = serializers.FortigateSerializer
+    filterset_class =  filtersets.FortigateFilterSet
 
 
-class FortiGateInterfaceViewSet(NetBoxModelViewSet):
-    queryset = models.FortiGateInterface.objects.select_related("fortigate__device", "parent").all()
-    serializer_class = serializers.FortiGateInterfaceSerializer
-    filterset_class =  filtersets.FortiGateInterfaceFilterSet
+class InterfacesViewSet(NetBoxModelViewSet):
+    queryset = models.Interfaces.objects.select_related("fortigate__device", "parent").all()
+    serializer_class = serializers.InterfacesSerializer
+    filterset_class =  filtersets.InterfacesFilterSet
 
 
-# class FortiGateZoneViewSet(NetBoxModelViewSet):
-#     queryset = models.FortiGateZone.objects.select_related("fortigate__device").prefetch_related("interface").all()
-#     serializer_class = serializers.FortiGateZoneSerializer
-#     filterset_class =  filtersets.FortiGateZoneFilterSet
+# class ZoneViewSet(NetBoxModelViewSet):
+#     queryset = models.Zone.objects.select_related("fortigate__device").prefetch_related("interface").all()
+#     serializer_class = serializers.ZoneSerializer
+#     filterset_class =  filtersets.ZoneFilterSet
 
 
 
-class FortiGateRouteViewSet(NetBoxModelViewSet):
-    queryset = models.FortiGateRoute.objects.select_related("fortigate__device", "interface", "next_hop").all()
-    serializer_class = serializers.FortiGateRouteSerializer
-    filterset_class =  filtersets.FortiGateRouteFilterSet
+class RoutingTableViewSet(NetBoxModelViewSet):
+    queryset = models.RoutingTable.objects.select_related("fortigate__device", "interface", "next_hop").all()
+    serializer_class = serializers.RoutingTableSerializer
+    filterset_class =  filtersets.RoutingTableFilterSet
 
 
-# class FortiGateObjectViewSet(NetBoxModelViewSet):
-#     queryset = models.FortiGateObject.objects.select_related("fortigate__device", "object_type").all()
-#     serializer_class = serializers.FortiGateObjectSerializer
-#     filterset_class =  filtersets.FortiGateObjectFilterSet
+# class ObjectViewSet(NetBoxModelViewSet):
+#     queryset = models.Object.objects.select_related("fortigate__device", "object_type").all()
+#     serializer_class = serializers.ObjectSerializer
+#     filterset_class =  filtersets.ObjectFilterSet
 
 
-class FortiGateSchedulerViewSet(NetBoxModelViewSet):
-    queryset = models.FortiGateScheduler.objects.all()
-    serializer_class = serializers.FortiGateSchedulerSerializer
-    filterset_class = filtersets.FortiGateSchedulerFilterSet
+class SchedulerViewSet(NetBoxModelViewSet):
+    queryset = models.Scheduler.objects.all()
+    serializer_class = serializers.SchedulerSerializer
+    filterset_class = filtersets.SchedulerFilterSet

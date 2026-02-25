@@ -5,15 +5,7 @@
 
 {% block head %}
   {{ block.super }}
-  <script>
-    // Provide correct static URLs to topology.js (fixes white blocks)
-    window.NBFORTIGATE_ASSETS = {
-      fortigateLight: "{% static 'netbox_fortigate/img/light-fortigate.png' %}",
-      fortigateDark: "{% static 'netbox_fortigate/img/dark-fortigate.png' %}",
-      host: "{% static 'netbox_fortigate/img/host.png' %}",
-      hostLight: "{% static 'netbox_fortigate/img/host-light.png' %}",
-    };
-  </script>
+  <link rel="stylesheet" href="{% static 'netbox_fortigate/topology.css' %}">
 {% endblock %}
 
 {% block content %}

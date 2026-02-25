@@ -13,5 +13,5 @@ NetBox 4.1.3 plugin skeleton.
 - Navigate to `/plugins/fortigate/`
 - You should see “netbox_fortigate: OK …”
 - Sidebar should show:
-  - FortiGate
-  - FortiGate Requests
+  - Fortigate
+  - Fortigate Requests

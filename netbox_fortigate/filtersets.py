@@ -9,21 +9,21 @@ from utilities.filters import MultiValueCharFilter
 from .models import *
 
 __all__ = (
-    "FortiGateDeviceFilterSet",
-    "FortiGateInterfaceFilterSet",
-    "FortiGateZoneFilterSet",
-    "FortiGateRouteFilterSet",
-    "FortiGateObjectFilterSet",
-    "FortiGateSchedulerFilterSet"
+    "FortigateFilterSet",
+    "InterfacesFilterSet",
+    "ZoneFilterSet",
+    "RoutingTableFilterSet",
+    "ObjectFilterSet",
+    "SchedulerFilterSet"
 )
 
-class FortiGateDeviceFilterSet(NetBoxModelFilterSet):
+class FortigateFilterSet(NetBoxModelFilterSet):
     device_id = django_filters.NumberFilter(field_name="device_id")
     enabled = django_filters.BooleanFilter(field_name="enabled")
     role = django_filters.CharFilter(field_name="role", lookup_expr="icontains")
 
     class Meta:
-        model = FortiGateDevice
+        model = Fortigate
         fields = ("device_id", "enabled", "role", "priority", "default_vdom")
 
     def search(self, queryset, name, value):
@@ -36,7 +36,7 @@ class FortiGateDeviceFilterSet(NetBoxModelFilterSet):
 
 
 
-class FortiGateInterfaceFilterSet(NetBoxModelFilterSet):
+class InterfacesFilterSet(NetBoxModelFilterSet):
     fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
     enabled = django_filters.BooleanFilter(field_name="enabled")
@@ -45,22 +45,22 @@ class FortiGateInterfaceFilterSet(NetBoxModelFilterSet):
     status = django_filters.CharFilter(field_name="status")
 
     class Meta:
-        model = FortiGateInterface
+        model = Interfaces
         fields = ("fortigate_id", "name", "enabled", "role", "vdom", "status")
 
 
-class FortiGateZoneFilterSet(NetBoxModelFilterSet):
+class ZoneFilterSet(NetBoxModelFilterSet):
     fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
     type = django_filters.CharFilter(field_name="type")
     intrazone = django_filters.CharFilter(field_name="intrazone")
 
     class Meta:
-        model = FortiGateZone
+        model = Zone
         fields = ("fortigate_id", "name", "type", "intrazone")
 
 
-class FortiGateRouteFilterSet(NetBoxModelFilterSet):
+class RoutingTableFilterSet(NetBoxModelFilterSet):
     prefix = MultiValueCharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -72,7 +72,7 @@ class FortiGateRouteFilterSet(NetBoxModelFilterSet):
     interface_id = django_filters.NumberFilter(field_name="interface_id")
 
     class Meta:
-        model = FortiGateRoute
+        model = RoutingTable
         fields = ("fortigate_id", "version", "type", "enabled", "interface_id")
 
     def search(self, queryset, name, value):
@@ -100,7 +100,7 @@ class FortiGateRouteFilterSet(NetBoxModelFilterSet):
         return queryset.filter(route__in=query_values)
 
 
-class FortiGateObjectFilterSet(NetBoxModelFilterSet):
+class ObjectFilterSet(NetBoxModelFilterSet):
     fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
     enabled = django_filters.BooleanFilter(field_name="enabled")
 
@@ -115,7 +115,7 @@ class FortiGateObjectFilterSet(NetBoxModelFilterSet):
     object_id = django_filters.NumberFilter(field_name="object_id")
 
     class Meta:
-        model = FortiGateObject
+        model = Object
         fields = (
             "fortigate_id",
             "enabled",
@@ -130,14 +130,14 @@ class FortiGateObjectFilterSet(NetBoxModelFilterSet):
 
 
 
-class FortiGateSchedulerFilterSet(NetBoxModelFilterSet):
+class SchedulerFilterSet(NetBoxModelFilterSet):
     enabled = django_filters.BooleanFilter()
     job_type = django_filters.CharFilter()
     schedule_mode = django_filters.CharFilter()
     frequency = django_filters.CharFilter()
 
     class Meta:
-        model = FortiGateScheduler
+        model = Scheduler
         fields = (
             "name",
             "enabled",

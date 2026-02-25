@@ -43,7 +43,7 @@ def update_inventory(fg, DEBUG=False):
 
         FORTIGATE = API.get(fg.fortios_version.strip(), None)
         if not FORTIGATE:
-            raise Exception(f"No available API client for FortiOS v{fg.fortios_version}")
+            raise Exception(f"No available API client for FortiOS {fg.fortios_version}")
         
         module = FORTIGATE(data, DEBUG)
         
@@ -66,24 +66,24 @@ def update_inventory(fg, DEBUG=False):
 
         # List of categories to fetch and update
         categories = [
-            ('interfaces', module.get_interfaces, FortiGateInterface, update_object),
-            ('zones', module.get_zones, FortiGateZone, update_object),
-            ('ipv4_routes', module.get_routing_table, FortiGateRoute, update_routing_table),
-            # ('addresses', module.get_address_objects, Address, update_object),
-            # ('address_groups', module.get_address_groups, AddressGroup, update_object),
-            # ('services', module.get_services, Service, update_object),
-            # ('service_groups', module.get_service_groups, ServiceGroup, update_object),
-            # ('vip', module.get_vip, VIP, update_object),
-            # ('vip_groups', module.get_vip_groups, VIPGroup, update_object),
-            # ('schedule_onetime', module.get_schedule_onetime, ScheduleOnetime, update_object),
-            # ('schedule_recurring', module.get_schedule_recurring, ScheduleRecurring, update_object),
-            # ('schedule_groups', module.get_schedule_groups, ScheduleGroup, update_object),
-            # ('profile_groups', module.get_profile_groups, ProfileGroup, update_object),
-            # ('ippools', module.get_ippools, IPPool, update_object),
-            # ('authentication_servers', module.get_authentication_servers, AuthenticationServer, update_object),
-            # ('users', module.get_users, User, update_object),
-            # ('user_groups', module.get_user_groups, UserGroup, update_object),
-            # ('policies', module.get_policies, Policy, update_object)
+            ('interfaces', module.get_interfaces, Interfaces, update_object),
+            ('zones', module.get_zones, Zone, update_object),
+            ('ipv4_routes', module.get_routing_table, RoutingTable, update_routing_table),
+            ('addresses', module.get_address_objects, Address, update_object),
+            ('address_groups', module.get_address_groups, AddressGroup, update_object),
+            ('services', module.get_services, Services, update_object),
+            ('service_groups', module.get_service_groups, ServiceGroup, update_object),
+            ('vip', module.get_vip, VIP, update_object),
+            ('vip_groups', module.get_vip_groups, VIPGroup, update_object),
+            ('schedule_onetime', module.get_schedule_onetime, ScheduleOnetime, update_object),
+            ('schedule_recurring', module.get_schedule_recurring, ScheduleRecurring, update_object),
+            ('schedule_groups', module.get_schedule_groups, ScheduleGroup, update_object),
+            ('profile_groups', module.get_profile_groups, ProfileGroup, update_object),
+            ('ippools', module.get_ippools, IPPool, update_object),
+            ('authentication_servers', module.get_authentication_servers, AuthenticationServer, update_object),
+            ('users', module.get_users, User, update_object),
+            ('user_groups', module.get_user_groups, UserGroup, update_object),
+            ('policies', module.get_policies, Policy, update_object)
         ]
         
         # Loop through and update each category
@@ -171,20 +171,20 @@ def update_routing_table(device=None, data={}, logger=logger):
     try:
         if not device and not data:
             raise Exception('No device or data provided')
-        route_ids = list(FortiGateRoute.objects.filter(interface__fortigate=device).values_list('id', flat=True))
+        route_ids = list(RoutingTable.objects.filter(interface__fortigate=device).values_list('id', flat=True))
         errors = []
         for address in data:
             for item in data[address]:
                 changes = []
                 item['next_hop'] = None
                 try:
-                    interface = FortiGateInterface.objects.get(fortigate=device, name=item['interface'])
-                except FortiGateInterface.DoesNotExist:
+                    interface = Interfaces.objects.get(fortigate=device, name=item['interface'])
+                except Interfaces.DoesNotExist:
                     logger.warning(f'Unable to add route ({address}:{item}). Missing object ({item['interface']})')
                     errors.append(f'Unable to add route ({address}:{item}). Missing object ({item['interface']})')
                     continue
                 if item['gateway']:
-                    qs = FortiGateInterface.objects.filter(ip__net_host=item['gateway'], is_decommissioned=False, enabled=True)
+                    qs = Interfaces.objects.filter(ip__net_host=item['gateway'], is_decommissioned=False, enabled=True)
                     if qs.count() > 1:
                         logger.warning(
                             f'Unable to identify next hop for "{address}"   due to multiple interface with IP address "{item['gateway']}": {", ".join([f"{i.device} - {i.name} ({i.id})" for i in qs])}')
@@ -195,7 +195,7 @@ def update_routing_table(device=None, data={}, logger=logger):
                         item['next_hop'] = qs.first().fortigate
                 try:
                     updated_time = timezone.localtime()
-                    route = FortiGateRoute.objects.get(interface=interface, route=address) # need to add gateway
+                    route = RoutingTable.objects.get(interface=interface, route=address) # need to add gateway
                     key_dict = route.__dict__
                     key_dict['interface'] = route.interface.name
                     if key_dict['gateway'] is None:
@@ -209,9 +209,9 @@ def update_routing_table(device=None, data={}, logger=logger):
                         if str(key_dict[key]) != str(item[key]):
                             changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing {key} from {str(key_dict[key])} to {item[key]}')
                             logger.info(f'{route.id}: Changing {address} {key} from {str(key_dict[key])} to {item[key]}')
-                except FortiGateRoute.DoesNotExist:
+                except RoutingTable.DoesNotExist:
                     logger.info(f'Creating "{address}" route')
-                    route = FortiGateRoute.objects.create(
+                    route = RoutingTable.objects.create(
                         fortigate=device,
                         route=address,
                         type=item['type'],
@@ -237,7 +237,7 @@ def update_routing_table(device=None, data={}, logger=logger):
                 if route.id in route_ids:
                     route_ids.remove(route.id)
         for id in route_ids:
-            FortiGateRoute.objects.get(id=id).delete()
+            RoutingTable.objects.get(id=id).delete()
         if errors:
             output = [True, 'Successful with Errors', errors]
         else:
@@ -261,7 +261,7 @@ def update_object(model, device=None, data={}, logger=logger):
         foreign_keys = {
             field.name: field.related_model
             for field in model._meta.fields
-            if isinstance(field, ForeignKey) and field.name != 'device'
+            if isinstance(field, ForeignKey) and field.name != 'fortigate'
         }
 
         for item in data.values():
@@ -335,7 +335,7 @@ def update_object(model, device=None, data={}, logger=logger):
                     logger.info(f'{model.__name__}:{obj.id}: Changing "{item["name"]}" status from Decommissioned to Active')
 
                 # Process fields excluding specific ones
-                ignored_fields = {'id', 'device', 'name', 'is_decommissioned', 'created', 'last_update'}
+                ignored_fields = {'id', 'fortigate', 'name', 'is_decommissioned', 'created', 'last_update'}
                 for field in model._meta.fields:
                     try:
                         if field.name in ignored_fields:

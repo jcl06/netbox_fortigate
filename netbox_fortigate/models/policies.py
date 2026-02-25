@@ -11,20 +11,20 @@ from datetime import datetime
 from ..fields import HostAddressField
 from ..choices import *
 from netbox.models import PrimaryModel
-from .objects import FortiGateObject, FortiGateUser, FortiGateAuthenticationServer
-from .devices import FortiGateDevice
+from .objects import Object, User, AuthenticationServer
+from .devices import Fortigate
 from ipaddress import ip_address, ip_network, IPv4Address, IPv4Network
 
 
 __all__ = (
-    'FortiGatePolicy',
-    'FortiGateProfileGroup',
-    'FortiGateIPPool',
-    'FortiGateUserGroup'
+    'Policy',
+    'ProfileGroup',
+    'IPPool',
+    'UserGroup'
 )
 
 
-class FortiGatePolicy(PrimaryModel):
+class Policy(PrimaryModel):
     policyid = models.PositiveBigIntegerField(
         verbose_name=_('Policy ID'),
         validators=[MinValueValidator(1), MaxValueValidator(4294967294)],
@@ -33,7 +33,7 @@ class FortiGatePolicy(PrimaryModel):
         default=None
     )
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -50,14 +50,14 @@ class FortiGatePolicy(PrimaryModel):
     )
     source_interface = models.ManyToManyField(
         verbose_name='Source Interface',
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['zone', 'interface']},
         related_name='%(class)s_src_object',
         help_text='Incoming (ingress) interface.'
     )
     destination_interface = models.ManyToManyField(
         verbose_name=_('Destination Interface'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['zone', 'interface']},
         related_name='%(class)s_dst_object',
         help_text='Outgoing (egress) interface.'
@@ -84,21 +84,21 @@ class FortiGatePolicy(PrimaryModel):
     )'''
     source_address = models.ManyToManyField(
         verbose_name=_('Source Address'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['address', 'address group']},
         related_name='%(class)s_srcaddr_object',
         help_text='Source IPv4 addresses and groups',
     )
     destination_address = models.ManyToManyField(
         verbose_name=_('Destination Address'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['address', 'address group', 'Virtual IP', 'Virtual IP Group']},
         related_name='%(class)s_dstaddr_object',
         help_text='Destination IPv4 addresses and groups.',
     )
     schedule = models.ForeignKey(
         verbose_name=_('schedule'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         on_delete=models.PROTECT,
         limit_choices_to={'is_decommissioned': False, 'type__in': ['schedule group', 'schedule onetime', 'schedule recurring']},
         related_name='%(class)s_schedule_object',
@@ -107,7 +107,7 @@ class FortiGatePolicy(PrimaryModel):
     )
     service = models.ManyToManyField(
         verbose_name=_('service'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['service', 'service group']},
         related_name='%(class)s_service',
         help_text='Service and service group names.',
@@ -128,7 +128,7 @@ class FortiGatePolicy(PrimaryModel):
     )
     profile_group = models.ForeignKey(
         verbose_name=_('profile group'),
-        to='netbox_fortigate.FortiGateProfileGroup',
+        to='netbox_fortigate.ProfileGroup',
         on_delete=models.PROTECT,
         limit_choices_to={'is_decommissioned': False},
         blank=True,
@@ -158,7 +158,7 @@ class FortiGatePolicy(PrimaryModel):
     )
     poolname = models.ManyToManyField(
         verbose_name=_('IP Pool Name'),
-        to='netbox_fortigate.FortiGateIPPool',
+        to='netbox_fortigate.IPPool',
         limit_choices_to={'is_decommissioned': False},
         blank=True,
         related_name='%(class)s',
@@ -166,7 +166,7 @@ class FortiGatePolicy(PrimaryModel):
     )
     groups = models.ManyToManyField(
         verbose_name=_('groups'),
-        to='netbox_fortigate.FortiGateUserGroup',
+        to='netbox_fortigate.UserGroup',
         limit_choices_to={'is_decommissioned': False},
         blank=True,
         related_name='%(class)s',
@@ -174,7 +174,7 @@ class FortiGatePolicy(PrimaryModel):
     )
     users = models.ManyToManyField(
         verbose_name=_('users'),
-        to='netbox_fortigate.FortiGateUser',
+        to='netbox_fortigate.User',
         limit_choices_to={'is_decommissioned': False},
         blank=True,
         related_name='%(class)s',
@@ -228,20 +228,20 @@ class FortiGatePolicy(PrimaryModel):
         return f'{self.fortigate} - {self.policyid}'
 
     def get_duplicate_name(self):
-        return FortiGatePolicy.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk)
+        return Policy.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk)
 
     def get_duplicate_policyid(self):
-        return FortiGatePolicy.objects.filter(policyid=self.policyid, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk)
+        return Policy.objects.filter(policyid=self.policyid, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk)
 
     def get_latest_policyid(self):
-        latest_policyid = FortiGatePolicy.objects.filter(fortigate=self.fortigate).aggregate(Max('policyid'))['policyid__max']
+        latest_policyid = Policy.objects.filter(fortigate=self.fortigate).aggregate(Max('policyid'))['policyid__max']
         return (latest_policyid or 0) + 5
 
     # Ensure validation is check when creating or updating object in shell or form
     def save(self, *args, **kwargs):
         self.clean()
         if not self.pk and not self.position:
-            last_position = FortiGatePolicy.objects.filter(fortigate=self.fortigate).count()
+            last_position = Policy.objects.filter(fortigate=self.fortigate).count()
             self.position = last_position + 1  # Assign position based on count
         super().save(*args, **kwargs)
 
@@ -307,11 +307,11 @@ class FortiGatePolicy(PrimaryModel):
         Retrieve policies for a given fortigate based on various filtering criteria.
 
         Parameters:
-            fortigate (str | FortiGateDevice): The fortigate name or FortiGateDevice instance.
+            fortigate (str | Fortigate): The fortigate name or Fortigate instance.
             srcaddr (str, optional): An IP address, network, or FQDN representing the source address.
             dstaddr (str, optional): An IP address, network, or FQDN representing the destination address.
-            src_obj (FortiGateObject, optional): An Object instance representing the source interface.
-            dst_obj (FortiGateObject, optional): An Object instance representing the destination interface.
+            src_obj (Object, optional): An Object instance representing the source interface.
+            dst_obj (Object, optional): An Object instance representing the destination interface.
             port (int | str, optional): A port (1-65535) or icmp type number (ex. 8 for ping) to filter policies by.
             protocol (str[], optional):  The protocol type, which can be 'TCP', 'UDP' or 'ICMP' (default is 'TCP').
             user (str, optional): Username for filtering policies based on user or user groups.
@@ -323,30 +323,30 @@ class FortiGatePolicy(PrimaryModel):
             lowest to highest).
 
         Notes:
-            - If `fortigate` is a string, it is resolved to a `FortiGateDevice` object.
+            - If `fortigate` is a string, it is resolved to a `Fortigate` object.
             - The function only returns policies where `is_decommissioned=False`.
             - If `user` is provided, the function filters policies by matching users or groups that has the provided user.
             - Address lookups are performed using `address_lookup`, expecting `srcaddr` and `dstaddr` as lists of `Object` instances.
             - `port_lookup` is used to match policies based on the provided `port` and `protocol`.
         """
         
-        objects = FortiGatePolicy.objects.none()
+        objects = Policy.objects.none()
         if isinstance(fortigate, str):
-            fortigate = FortiGateDevice.objects.filter(name=fortigate).first()
+            fortigate = Fortigate.objects.filter(name=fortigate).first()
             if not fortigate:
                 return objects
         
-        if not isinstance(fortigate, FortiGateDevice):
+        if not isinstance(fortigate, Fortigate):
             return objects
 
         if all:
-            policies = FortiGatePolicy.objects.filter(fortigate=fortigate, is_decommissioned=False)
+            policies = Policy.objects.filter(fortigate=fortigate, is_decommissioned=False)
         else:
-            policies = FortiGatePolicy.objects.filter(fortigate=fortigate, is_decommissioned=False, status='enable')
+            policies = Policy.objects.filter(fortigate=fortigate, is_decommissioned=False, status='enable')
 
-        if src_obj and isinstance(src_obj, FortiGateObject):
+        if src_obj and isinstance(src_obj, Object):
             policies = policies.filter(source_interface__in=src_obj.intf_obj_with_any())
-        if dst_obj and isinstance(dst_obj, FortiGateObject):
+        if dst_obj and isinstance(dst_obj, Object):
             policies = policies.filter(destination_interface__in=dst_obj.intf_obj_with_any())
         if srcaddr:
             policies = policies.filter(source_address__in=address_lookup(fortigate, srcaddr))
@@ -357,10 +357,10 @@ class FortiGatePolicy(PrimaryModel):
         
         # If user is provided, apply the user or group filters
         if user:
-            groups = FortiGateUserGroup.user_lookup(fortigate, user)
+            groups = UserGroup.user_lookup(fortigate, user)
             # Filter matching user/groups or no users/groups
             policies = policies.filter(
-                Q(users__in=FortiGateUser.objects.filter(name=user)) |
+                Q(users__in=User.objects.filter(name=user)) |
                 Q(groups__in=groups) |
                 Q(users__isnull=True, groups__isnull=True)
             ).distinct()
@@ -382,12 +382,12 @@ class FortiGatePolicy(PrimaryModel):
     
         
 
-class FortiGateProfileGroup(PrimaryModel):
+class ProfileGroup(PrimaryModel):
     """
     Security Profile Group
     """
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -413,7 +413,7 @@ class FortiGateProfileGroup(PrimaryModel):
         return f'{self.fortigate} - {self.name}'
     
     def get_duplicate_name(self):
-        return FortiGateProfileGroup.objects.exclude(pk=self.pk).filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exists()
+        return ProfileGroup.objects.exclude(pk=self.pk).filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exists()
 
     # Ensure validation is check when creating or updating object in shell or form
     def save(self, *args, **kwargs):
@@ -428,9 +428,9 @@ class FortiGateProfileGroup(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateIPPool(PrimaryModel):
+class IPPool(PrimaryModel):
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -519,7 +519,7 @@ class FortiGateIPPool(PrimaryModel):
         return f'{self.fortigate} - {self.name}'
     
     def get_duplicate_name(self):
-        return FortiGateIPPool.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk).exists()
+        return IPPool.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk).exists()
 
     # Ensure validation is check when creating or updating object in shell or form
     def save(self, *args, **kwargs):
@@ -546,9 +546,9 @@ class FortiGateIPPool(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
 
 
-class FortiGateUserGroup(PrimaryModel):
+class UserGroup(PrimaryModel):
     fortigate = models.ForeignKey(
-        to='netbox_fortigate.FortiGateDevice',
+        to='netbox_fortigate.Fortigate',
         on_delete=models.CASCADE,
         related_name='%(class)s',
         limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
@@ -565,7 +565,7 @@ class FortiGateUserGroup(PrimaryModel):
     )'''
     member = models.ManyToManyField(
         verbose_name=_('member'),
-        to='netbox_fortigate.FortiGateObject',
+        to='netbox_fortigate.Object',
         limit_choices_to={'is_decommissioned': False, 'type__in': ['user', 'authentication server']},
         related_name='%(class)s_member_object',
     )
@@ -601,7 +601,7 @@ class FortiGateUserGroup(PrimaryModel):
         return f'{self.fortigate} - {self.name}'
     
     def get_duplicate_name(self):
-        return FortiGateUserGroup.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk).exists()
+        return UserGroup.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk).exists()
 
     # Ensure validation is check when creating or updating object in shell or form
     def save(self, *args, **kwargs):
@@ -620,26 +620,26 @@ class FortiGateUserGroup(PrimaryModel):
             raise ValidationError({'name': 'Found duplicate name.'})
         
     def user_lookup(fortigate, username):
-        user_groups = FortiGateUserGroup.objects.none()
+        user_groups = UserGroup.objects.none()
 
         if isinstance(fortigate, str):
-            fortigate = FortiGateDevice.objects.filter(name=fortigate).first()
+            fortigate = Fortigate.objects.filter(name=fortigate).first()
             if not fortigate:
                 return user_groups
 
         if not isinstance(username, str):
             return user_groups
 
-        user = FortiGateUser.objects.filter(fortigate=fortigate, name=username).first()
+        user = User.objects.filter(fortigate=fortigate, name=username).first()
         if not user:
             return user_groups
 
         # Find objects related to the user and authentication server
-        objs = FortiGateObject.objects.filter(fortigate=fortigate, type='user', object_id=user.id)
-        objs |= FortiGateObject.objects.filter(fortigate=fortigate, type='authentication server', object_id=user.server.id)
+        objs = Object.objects.filter(fortigate=fortigate, type='user', object_id=user.id)
+        objs |= Object.objects.filter(fortigate=fortigate, type='authentication server', object_id=user.server.id)
 
         # Retrieve and return UserGroup instances
-        return FortiGateUserGroup.objects.filter(member__in=objs) 
+        return UserGroup.objects.filter(member__in=objs) 
 
 
 

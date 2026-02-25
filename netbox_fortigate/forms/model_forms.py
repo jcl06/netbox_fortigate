@@ -11,11 +11,11 @@ from ..choices import ScheduleModeChoices
 
 
 __all__ = (
- "FortiGateDeviceForm",
- "FortiGateSchedulerForm"
+ "FortigateForm",
+ "SchedulerForm"
 )
 
-class FortiGateDeviceForm(NetBoxModelForm):
+class FortigateForm(NetBoxModelForm):
     device = forms.ModelChoiceField(
         queryset=Device.objects.all()
     )
@@ -23,7 +23,7 @@ class FortiGateDeviceForm(NetBoxModelForm):
     mgmt_ip = forms.ModelChoiceField(queryset=IPAddress.objects.all(), required=False)
 
     class Meta:
-        model = FortiGateDevice
+        model = Fortigate
         fields = (
             "device",
             "mgmt_ip",
@@ -42,7 +42,7 @@ class FortiGateDeviceForm(NetBoxModelForm):
     
 
 
-class FortiGateSchedulerForm(forms.ModelForm):
+class SchedulerForm(forms.ModelForm):
     interval_minutes = forms.IntegerField(
         required=False,
         min_value=1,
@@ -57,7 +57,7 @@ class FortiGateSchedulerForm(forms.ModelForm):
         help_text=_("Required for monthly schedules (1-31). If a month is shorter, the job will run on the month's last day."),
     )
     class Meta:
-        model = FortiGateScheduler
+        model = Scheduler
         fields = (
             "name",
             "description",

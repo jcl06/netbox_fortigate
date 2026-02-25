@@ -7,7 +7,7 @@ from django.views import View
 from django.utils import timezone
 
 from ..utils.policy_lookups import is_connection_allowed, get_objects_values
-from ..models import FortiGateDevice, FortiGatePolicy, FortiGateObject
+from ..models import Fortigate, Policy, Object
 
 import logging
 import json
@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class DrawPathView(PermissionRequiredMixin, View):
-    permission_required = "dcim.view_device"
+    permission_required = "netbox_fortigate.view_policy"
     template_name = "netbox_fortigate/check_policy_form.html"
 
     def get(self, request, *args, **kwargs):
@@ -387,13 +387,13 @@ def get_filtered_fields(request):
     if fortigate:
         # Filter services based on the fortigate
         services = []
-        for item in FortiGateObject.objects.filter(fortigate=fortigate, type__in=['service', 'servicegroup']):
+        for item in Object.objects.filter(fortigate=fortigate, type__in=['service', 'servicegroup']):
             services.append({'id': item.id, 'name': item.object.name})
         source_address = []
-        for item in FortiGateObject.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup']):
+        for item in Object.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup']):
             source_address.append({'id': item.id, 'name': item.object.name})
         destination_address = []
-        for item in FortiGateObject.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup', 'vip', 'vipgroup']):
+        for item in Object.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup', 'vip', 'vipgroup']):
             destination_address.append({'id': item.id, 'name': item.object.name})
 
         # Return the filtered results as JSON
@@ -442,10 +442,10 @@ class PolicyView(PermissionRequiredMixin, View):
 
         try:
             if fortigate and pid:
-                fg = FortiGateDevice.objects.filter(id=fortigate).first()
+                fg = Fortigate.objects.filter(id=fortigate).first()
                 if fg:
                     obj = (
-                        FortiGatePolicy.objects.filter(
+                        Policy.objects.filter(
                             fortigate=fg,
                             is_decommissioned=False,
                             policyid=pid,
@@ -501,9 +501,9 @@ def policy_view(request, fortigate=None, pid=None):
     error = None
     try:
         if fortigate and pid:
-            fortigate = FortiGateDevice.objects.filter(id=fortigate).first()
+            fortigate = Fortigate.objects.filter(id=fortigate).first()
             if fortigate:
-                obj = FortiGatePolicy.objects.filter(fortigate=fortigate, is_decommissioned=False, policyid=pid).first()
+                obj = Policy.objects.filter(fortigate=fortigate, is_decommissioned=False, policyid=pid).first()
                 policy = {}
                 users = []
                 if obj:

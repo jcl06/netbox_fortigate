@@ -1,6 +1,6 @@
 {% load i18n %}
 
-{% if perms.dcim.change_device %}
+{% if perms.dcim.change_device and object.fortigate %}
   <form method="post"
         action="{% url 'plugins:netbox_fortigate:device_pull_inventory' pk=object.fortigate.pk %}"
         class="d-inline">

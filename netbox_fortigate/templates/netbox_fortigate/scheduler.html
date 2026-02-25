@@ -4,9 +4,9 @@
 
 {# Add our button inside NetBox's standard controls wrapper #}
 {% block extra_controls %}
-  {% if perms.netbox_fortigate.change_fortigatescheduler %}
+  {% if perms.netbox_fortigate.change_scheduler %}
     <form method="post"
-          action="{% url 'plugins:netbox_fortigate:fortigatescheduler_run_now' pk=object.pk %}"
+          action="{% url 'plugins:netbox_fortigate:scheduler_run_now' pk=object.pk %}"
           class="d-inline">
       {% csrf_token %}
       <button type="submit" class="btn btn-primary">

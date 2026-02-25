@@ -12,7 +12,7 @@ from netbox.jobs import JobRunner
 from .utils.settings import get_plugin_default
 from .utils.inventory import update_inventory
 
-from .models import FortiGateScheduler, FortiGateDevice
+from .models import Scheduler, Fortigate
 from .choices import ScheduleFrequencyChoices, ScheduleModeChoices
 
 
@@ -121,7 +121,7 @@ class _JobDataMixin:
             self.job.save(update_fields=["data"])
 
 
-class FortiGateInventoryPullRunner(_JobDataMixin, JobRunner):
+class InventoryPullRunner(_JobDataMixin, JobRunner):
     class Meta:
         name = "Inventory Pull"
 
@@ -136,20 +136,20 @@ class FortiGateInventoryPullRunner(_JobDataMixin, JobRunner):
         max_workers = get_plugin_default("inventory_max_workers", 10)
 
         if fg_id:
-            devices = list(FortiGateDevice.objects.filter(pk=fg_id))
+            devices = list(Fortigate.objects.filter(pk=fg_id))
         else:
-            schedule = FortiGateScheduler.objects.get(pk=schedule_id)
+            schedule = Scheduler.objects.get(pk=schedule_id)
             if not schedule.enabled:
                 return
             
-            devices = list(FortiGateDevice.objects.filter(enabled=True))
+            devices = list(Fortigate.objects.filter(enabled=True))
 
         items: list[dict] = []
         failed = success = with_errors = 0
 
         def worker(fg_id: int):
             close_old_connections()
-            fg = FortiGateDevice.objects.get(pk=fg_id)
+            fg = Fortigate.objects.get(pk=fg_id)
 
             # IMPORTANT: do not rewrite update_inventory here; just call it
             # Expected return: [ok(bool), state_or_error(str), items(list)]
@@ -255,14 +255,14 @@ class FortiGateInventoryPullRunner(_JobDataMixin, JobRunner):
 
 
 
-class FortiGateRequestRunner(_JobDataMixin, JobRunner):
+class RequestRunner(_JobDataMixin, JobRunner):
     class Meta:
         name = "Implement Request"
 
     def run(self, schedule_id, data=None, *args, **kwargs):
         self.seed_job_data(data=data)
 
-        schedule = FortiGateScheduler.objects.get(pk=schedule_id)
+        schedule = Scheduler.objects.get(pk=schedule_id)
         if not schedule.enabled:
             return
 

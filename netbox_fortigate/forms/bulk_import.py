@@ -6,14 +6,14 @@ from ipam.models import IPAddress
 from netbox.forms import NetBoxModelImportForm
 from utilities.forms.fields import CSVModelChoiceField
 
-from ..models import FortiGateDevice, default_api_port, default_ssh_port
+from ..models import Fortigate, default_api_port, default_ssh_port
 
 __all__ = (
-    'FortiGateDeviceImportForm',
+    'FortigateImportForm',
 )
 
 
-class FortiGateDeviceImportForm(NetBoxModelImportForm):
+class FortigateImportForm(NetBoxModelImportForm):
     device = CSVModelChoiceField(
         label=_('Device'),
         queryset=Device.objects.all(),
@@ -25,7 +25,7 @@ class FortiGateDeviceImportForm(NetBoxModelImportForm):
     mgmt_ip = CSVModelChoiceField(
         label=_('Management IP'),
         queryset=IPAddress.objects.all(),
-        required=True,
+        required=False,
         to_field_name='address',
         help_text=_('Device Management IP Address')
     )
@@ -52,12 +52,12 @@ class FortiGateDeviceImportForm(NetBoxModelImportForm):
     role = forms.CharField(
         required=False,
         initial="firewall",
-        help_text=_('FortiGate plugin role key (e.g. user_vpn).')
+        help_text=_('Fortigate plugin role key (e.g. user_vpn).')
     )
 
 
     class Meta:
-        model = FortiGateDevice
+        model = Fortigate
         fields = (
             "device",
             "mgmt_ip",

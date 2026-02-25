@@ -65,7 +65,7 @@ def is_connection_allowed(src, dst, protocol=1, port=0, auth_type=None, user_gro
                 
                 status = find_policy(device, srcintf.name, src, dst, protocol, port, auth_type, user_group, icmptype)
                 if status[0]:
-                    if status[1] > 0:  # Referred to FortiGatePolicy ID, 0 means no policy matched
+                    if status[1] > 0:  # Referred to Policy ID, 0 means no policy matched
                         policy_count += 1
                         if status[2] == 'accept':
                             if status[1] not in policies['allow']:
@@ -91,8 +91,8 @@ def is_connection_allowed(src, dst, protocol=1, port=0, auth_type=None, user_gro
                     if icmptype and protocol.upper() == 'ICMP':
                         port = icmptype
                     # print(f'checking: {device}, {src}, {dst}, {src_obj}, {dst_obj}, {port}, {protocol}, {user_group}')
-                    logger.info('Looking in FortiGatePolicy table')
-                    policies = FortiGatePolicy.get_policies(device, src, dst, src_obj, dst_obj, port, protocol, user_group, date=timezone.now())
+                    logger.info('Looking in Policy table')
+                    policies = Policy.get_policies(device, src, dst, src_obj, dst_obj, port, protocol, user_group, date=timezone.now())
                     if policies:
                         allowed = policies.first().action
                         if allowed == 'accept':
@@ -126,7 +126,7 @@ class INET(Func):
 def get_vips_by_ip(device, address):
     """Returns VIPs based on the device and IP address or range."""
     # Annotate VIP entries with range logic
-    vip_addresses = FortiGateVIP.objects.filter(fortigate=device).annotate(
+    vip_addresses = VIP.objects.filter(fortigate=device).annotate(
         is_range=Case(
             When(external_ip__contains='-', then=Value(True)),
             default=Value(False),
@@ -168,38 +168,38 @@ def address_lookup(device, address, dstaddr=False):
     address_type = is_network_or_ip(address)
 
     if isinstance(device, str):
-        device = FortiGateDevice.objects.filter(name=device).first()
+        device = Fortigate.objects.filter(name=device).first()
         if not device:
             return objects
 
     # Handle IP Address or Network
     if address_type == "IP Address":
-        addresses.update(FortiGateAddress.objects.filter(
-            device=device, type='iprange', start_ip__lte=address, end_ip__gte=address
+        addresses.update(Address.objects.filter(
+            fortigate=device, type='iprange', start_ip__lte=address, end_ip__gte=address
         ).values_list('id', flat=True))
-        addresses.update(FortiGateAddress.objects.filter(
-            device=device, subnet__net_contains_or_equals =address
+        addresses.update(Address.objects.filter(
+            fortigate=device, subnet__net_contains_or_equals =address
         ).values_list('id', flat=True))
     
     if address_type == "Network":
-        addresses.update(FortiGateAddress.objects.filter(
-            device=device, subnet__net_contains_or_equals =address
+        addresses.update(Address.objects.filter(
+            fortigate=device, subnet__net_contains_or_equals =address
         ).values_list('id', flat=True))
     
     # Handle FQDN and Subdomains
     else:
         domain = ".".join(address.split(".")[-2:])
-        addresses.update(FortiGateAddress.objects.filter(device=device, type='fqdn').filter(
+        addresses.update(Address.objects.filter(fortigate=device, type='fqdn').filter(
             Q(fqdn__iexact=domain) |  # Exact match
             Q(fqdn__iexact=f'*.{domain}') |  # Match *.abc.com
             Q(fqdn__iendswith=f'.{domain}')  # Match subdomains like 123.abc.com
         ).values_list('id', flat=True))
-        addresses.update(FortiGateAddress.objects.filter(device=device, subnet='0.0.0.0/0').values_list('id', flat=True))
+        addresses.update(Address.objects.filter(fortigate=device, subnet='0.0.0.0/0').values_list('id', flat=True))
 
     # Retrieve address objects and groups
-    address_objs = FortiGateObject.objects.filter(type='address', object_id__in=addresses)
-    address_group = FortiGateAddressGroup.objects.filter(member__in=address_objs)
-    address_group_objs = FortiGateObject.objects.filter(device=device, type='address group', object_id__in=address_group)
+    address_objs = Object.objects.filter(type='address', object_id__in=addresses)
+    address_group = AddressGroup.objects.filter(member__in=address_objs)
+    address_group_objs = Object.objects.filter(fortigate=device, type='address group', object_id__in=address_group)
     objects.update(address_objs)
     objects.update(address_group_objs)
 
@@ -207,16 +207,16 @@ def address_lookup(device, address, dstaddr=False):
         vip_addresses = set()
         if address_type == "Invalid Address":
             domain = ".".join(address.split(".")[-2:])
-            vip_addresses = FortiGateVIP.objects.filter(device=device).filter(
+            vip_addresses = VIP.objects.filter(fortigate=device).filter(
                 Q(external_address__fqdn__iexact=domain) |  # Exact match
                 Q(external_address__fqdn__iexact=f'*.{domain}') |  # Match *.abc.com
                 Q(external_address__fqdn__iendswith=f'.{domain}')  # Match subdomains like 123.abc.com
             )
         elif address_type == 'IP Address':
             vip_addresses = get_vips_by_ip(device, address)  # VIP filter based on IP range
-        vip_objs = FortiGateObject.objects.filter(type='Virtual IP', object_id__in=vip_addresses.values_list('id', flat=True))
-        vip_group = FortiGateVIPGroup.objects.filter(member__in=vip_addresses)
-        vip_group_objs = FortiGateObject.objects.filter(device=device, type='Virtual IP Group', object_id__in=vip_group)
+        vip_objs = Object.objects.filter(type='Virtual IP', object_id__in=vip_addresses.values_list('id', flat=True))
+        vip_group = VIPGroup.objects.filter(member__in=vip_addresses)
+        vip_group_objs = Object.objects.filter(fortigate=device, type='Virtual IP Group', object_id__in=vip_group)
         objects.update(vip_objs)
         objects.update(vip_group_objs)
 
@@ -241,7 +241,7 @@ def is_network_or_ip(addr):
 def get_vips_by_ip(device, address):
     """Returns VIPs based on the device and IP address or range."""
     # Annotate VIP entries with range logic
-    vip_addresses = FortiGateVIP.objects.filter(device=device).annotate(
+    vip_addresses = VIP.objects.filter(fortigate=device).annotate(
         is_range=Case(
             When(external_ip__contains='-', then=Value(True)),
             default=Value(False),
@@ -277,65 +277,65 @@ def get_vips_by_ip(device, address):
 
 
 def address_lookup(device, address, dstaddr=False):
-    objects = FortiGateObject.objects.none()
+    objects = Object.objects.none()
     addresses = set()
     address = address.lower()
     address_type = is_network_or_ip(address)
 
     if isinstance(device, str):
-        device = FortiGateDevice.objects.filter(fortigate=device).first()
+        device = Fortigate.objects.filter(fortigate=device).first()
         if not device:
             return objects
 
     # Handle IP Address
     if address_type == "IP Address":
-        addresses.update(FortiGateAddress.objects.filter(
+        addresses.update(Address.objects.filter(
             fortigate=device, type='iprange', start_ip__lte=address, end_ip__gte=address
         ).values_list('id', flat=True))
-        addresses.update(FortiGateAddress.objects.filter(
+        addresses.update(Address.objects.filter(
             fortigate=device, subnet__net_contains_or_equals =address
         ).values_list('id', flat=True))
 
     # Handle Network Address
     elif address_type == "Network":
-        addresses.update(FortiGateAddress.objects.filter(
+        addresses.update(Address.objects.filter(
             fortigate=device, subnet__net_contains_or_equals =address
         ).values_list('id', flat=True))
     
     # Handle FQDN and Subdomains
     elif address_type == "FQDN":
         domain = ".".join(address.split(".")[-2:])
-        addresses.update(FortiGateAddress.objects.filter(fortigate=device, type='fqdn').filter(
+        addresses.update(Address.objects.filter(fortigate=device, type='fqdn').filter(
             Q(fqdn__iexact=domain) |  # Exact match
             Q(fqdn__iexact=f'*.{domain}') |  # Match *.abc.com
             Q(fqdn__iendswith=f'.{domain}')  # Match subdomains like 123.abc.com
         ).values_list('id', flat=True))
-        addresses.update(FortiGateAddress.objects.filter(fortigate=device, subnet='0.0.0.0/0').values_list('id', flat=True))
+        addresses.update(Address.objects.filter(fortigate=device, subnet='0.0.0.0/0').values_list('id', flat=True))
     else:
         logger.info(f'{address} is not a valid address.')
         return objects
     
     # Retrieve address objects and groups
-    objects = FortiGateObject.objects.filter(fortigate=device, type='address', object_id__in=addresses)
-    address_group = FortiGateAddressGroup.objects.filter(member__in=objects)
-    address_group_objs = FortiGateObject.objects.filter(fortigate=device, type='address group', object_id__in=address_group)
+    objects = Object.objects.filter(fortigate=device, type='address', object_id__in=addresses)
+    address_group = AddressGroup.objects.filter(member__in=objects)
+    address_group_objs = Object.objects.filter(fortigate=device, type='address group', object_id__in=address_group)
     objects |= address_group_objs
 
     if dstaddr:
         vip_addresses = set()
         if address_type == "FQDN":
             domain = ".".join(address.split(".")[-2:])
-            vip_addresses = FortiGateVIP.objects.filter(fortigate=device).filter(
+            vip_addresses = VIP.objects.filter(fortigate=device).filter(
                 Q(external_address__fqdn__iexact=domain) |  # Exact match
                 Q(external_address__fqdn__iexact=f'*.{domain}') |  # Match *.abc.com
                 Q(external_address__fqdn__iendswith=f'.{domain}')  # Match subdomains like 123.abc.com
             )
         elif address_type == 'IP Address':
             vip_addresses = get_vips_by_ip(device, address)  # VIP filter based on IP range
-        vip_objs = FortiGateObject.objects.filter(fortigate=device, type='Virtual IP', object_id__in=vip_addresses.values_list('id', flat=True))
+        vip_objs = Object.objects.filter(fortigate=device, type='Virtual IP', object_id__in=vip_addresses.values_list('id', flat=True))
         objects |= vip_objs
-        vip_group = FortiGateVIPGroup.objects.filter(member__in=vip_addresses)
-        vip_group_objs = FortiGateObject.objects.filter(fortigate=device, type='Virtual IP Group', object_id__in=vip_group)
+        vip_group = VIPGroup.objects.filter(member__in=vip_addresses)
+        vip_group_objs = Object.objects.filter(fortigate=device, type='Virtual IP Group', object_id__in=vip_group)
         objects |= vip_group_objs
 
     return objects
@@ -366,11 +366,11 @@ def is_valid_fqdn(domain):
 
 
 def port_lookup(device, port, type='TCP'):
-    objects = FortiGateObject.objects.none()
+    objects = Object.objects.none()
     type = type.upper()
 
     if isinstance(device, str):
-        device = FortiGateDevice.objects.filter(name=device).first()
+        device = Fortigate.objects.filter(name=device).first()
         if not device:
             return objects
             
@@ -385,24 +385,24 @@ def port_lookup(device, port, type='TCP'):
     
     # Get the list of service IDs based on type (tcp/udp)
     if type == 'TCP':
-        services = list(FortiGateService.objects.filter(fortigate=device, tcp_portrange=port).values_list('id', flat=True))
+        services = list(Services.objects.filter(fortigate=device, tcp_portrange=port).values_list('id', flat=True))
     elif type == 'UDP':
-        services = list(FortiGateService.objects.filter(fortigate=device, udp_portrange=port).values_list('id', flat=True))
+        services = list(Services.objects.filter(fortigate=device, udp_portrange=port).values_list('id', flat=True))
     elif type == 'ICMP':
-        services = list(FortiGateService.objects.filter(fortigate=device).filter(
+        services = list(Services.objects.filter(fortigate=device).filter(
             Q(protocol='ICMP', icmptype__isnull=True) | 
             Q(protocol='IP', protocol_number=0)
         ).values_list('id', flat=True))
-        services.extend(FortiGateService.objects.filter(fortigate=device, protocol='ICMP', icmptype=port).values_list('id', flat=True))
+        services.extend(Services.objects.filter(fortigate=device, protocol='ICMP', icmptype=port).values_list('id', flat=True))
     else: 
         return objects
     
     # Retrieve service objects based on service IDs
-    objects = FortiGateObject.objects.filter(type='service', object_id__in=services)
+    objects = Object.objects.filter(type='service', object_id__in=services)
 
     # Retrieve service group objects based on members of the above service objects
-    service_group = FortiGateServiceGroup.objects.filter(member__in=objects)
-    service_group_objs = FortiGateObject.objects.filter(fortigate=device, type='service group', object_id__in=service_group)
+    service_group = ServiceGroup.objects.filter(member__in=objects)
+    service_group_objs = Object.objects.filter(fortigate=device, type='service group', object_id__in=service_group)
 
     # Combine the service group objects with the service objects using union
     objects |= service_group_objs
@@ -411,11 +411,11 @@ def port_lookup(device, port, type='TCP'):
 
 
 def schedule_lookup(device, date=timezone.now(), start='00:00', end='00:00'):
-    objects = FortiGateObject.objects.none()
+    objects = Object.objects.none()
     schedule_objs = set()
 
     if isinstance(device, str):
-        device = FortiGateDevice.objects.filter(name=device).first()
+        device = Fortigate.objects.filter(name=device).first()
         if not device:
             return objects
 
@@ -432,41 +432,41 @@ def schedule_lookup(device, date=timezone.now(), start='00:00', end='00:00'):
         return objects
     
     today = date.strftime('%A').lower()
-    onetime_schedules = FortiGateScheduleOnetime.objects.filter(fortigate=device, start__lte=date, end__gte=date).values_list('id', flat=True)
-    onetime_schedules_objs = FortiGateObject.objects.filter(fortigate=device, type='schedule onetime', object_id__in=onetime_schedules)
+    onetime_schedules = ScheduleOnetime.objects.filter(fortigate=device, start__lte=date, end__gte=date).values_list('id', flat=True)
+    onetime_schedules_objs = Object.objects.filter(fortigate=device, type='schedule onetime', object_id__in=onetime_schedules)
     schedule_objs.update(onetime_schedules_objs)
     objects = onetime_schedules_objs
     
-    recurring_schedules = FortiGateScheduleRecurring.objects.filter(
+    recurring_schedules = ScheduleRecurring.objects.filter(
         fortigate=device, day__icontains=today, start__lte=start, end__gte=end).values_list('id', flat=True)
-    recurring_schedules_objs = FortiGateObject.objects.filter(fortigate=device, type='schedule recurring', object_id__in=recurring_schedules)
+    recurring_schedules_objs = Object.objects.filter(fortigate=device, type='schedule recurring', object_id__in=recurring_schedules)
     schedule_objs.update(recurring_schedules_objs)
     objects |= recurring_schedules_objs
     
-    schedule_group = FortiGateScheduleGroup.objects.filter(member__in=schedule_objs)
-    schedule_group_objs = FortiGateObject.objects.filter(fortigate=device, type='schedule group', object_id__in=schedule_group)
+    schedule_group = ScheduleGroup.objects.filter(member__in=schedule_objs)
+    schedule_group_objs = Object.objects.filter(fortigate=device, type='schedule group', object_id__in=schedule_group)
     objects |= schedule_group_objs
 
     return objects
 
 
 def policy_lookup(device, src, dst, src_obj, dst_obj, port=None, protocol='TCP', user=None):
-    from ..models import FortiGatePolicy
+    from ..models import Policy
     output = [False, 'Unknown']
     allowed = 'deny'
     try:
         if isinstance(device, str):
-            device = FortiGateDevice.objects.filter(name=device).first()
+            device = Fortigate.objects.filter(name=device).first()
             if not device:
                 raise Exception(f'{device} does not exist')
 
-        if not all(isinstance(obj, FortiGateObject) for obj in (src_obj, dst_obj)):
+        if not all(isinstance(obj, Object) for obj in (src_obj, dst_obj)):
             raise Exception(f'{src_obj} or {dst_obj} is invalid object')
 
         if protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-            raise Exception(f'{protocol} is an invalid protol. FortiGatePolicy lookup only ')
+            raise Exception(f'{protocol} is an invalid protol. Policy lookup only ')
 
-        policies = FortiGatePolicy.get_policies(device, src, dst, src_obj, dst_obj, port, protocol, user)
+        policies = Policy.get_policies(device, src, dst, src_obj, dst_obj, port, protocol, user)
         logger.info(f'Policies:\n{policies.__dict__}')
         if policies:
             allowed = policies.first().action
@@ -496,17 +496,17 @@ def get_interface_object(device, items):
             break
     if object:
         try:
-            object = FortiGateObject.objects.get(fortigate=device, type=type, object_id=object.id)
-        except FortiGateObject.DoesNotExist:
+            object = Object.objects.get(fortigate=device, type=type, object_id=object.id)
+        except Object.DoesNotExist:
             object = None
     return object
 
 
 
-def get_objects_values(objects, to_str=False, model='FortiGateObject'):
+def get_objects_values(objects, to_str=False, model='Object'):
     data = []
-    if model != 'FortiGateObject':
-        if model == 'FortiGateUserGroup':
+    if model != 'Object':
+        if model == 'UserGroup':
             for obj in objects:
                 data.extend(get_objects_values(obj.member.all()))
         else:

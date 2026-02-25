@@ -6,12 +6,12 @@ from django.core.exceptions import ValidationError
 from netbox.jobs import JobRunner
 
 from .choices import JobTypeChoices
-from .jobs import FortiGateInventoryPullRunner, FortiGateRequestRunner
+from .jobs import InventoryPullRunner, RequestRunner
 
 
 RUNNER_REGISTRY: dict[str, Type[JobRunner]] = {
-    JobTypeChoices.INVENTORY_PULL: FortiGateInventoryPullRunner,
-    JobTypeChoices.IMPLEMENT_REQUEST: FortiGateRequestRunner,
+    JobTypeChoices.INVENTORY_PULL: InventoryPullRunner,
+    JobTypeChoices.IMPLEMENT_REQUEST: RequestRunner,
 }
 
 

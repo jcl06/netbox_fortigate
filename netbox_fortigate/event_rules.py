@@ -17,7 +17,7 @@ def ensure_event_rule(sender, **kwargs):
     notification_ct = ObjectType.objects.get_by_natural_key("extras", "notification")
 
     rule, created = EventRule.objects.get_or_create(
-        name="FortiGate: Notify Job Scheduler",
+        name="Fortigate: Notify Job Scheduler",
         defaults={
             "enabled": False,
             "event_types": ["job_completed", "job_failed", "job_errored"], 

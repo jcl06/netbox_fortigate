@@ -7,9 +7,9 @@ OBJECT_TYPE_CHOICES = (
     ("authentication server", "Authentication Server"),
     ("address", "Address"),
     ("address group", "Address Group"),
-    ("service", "Service"),
+    ("service", "Services"),
     ("service group", "Service Group"),
-    ("interface", "Interface"),
+    ("interface", "Interfaces"),
     ("zone", "Zone"),
     ("Virtual IP", "Virtual IP"),
     ("Virtual IP Group", "Virtual IP Group"),
@@ -19,19 +19,19 @@ OBJECT_TYPE_CHOICES = (
 )
 
 CONTENT_TYPE_CHOICES = (
-    Q(app_label='netbox_fortigate', model='fortigateinterface') |
-    Q(app_label='netbox_fortigate', model='fortigatezone') |
-    Q(app_label='netbox_fortigate', model='fortigateaddress') |
-    Q(app_label='netbox_fortigate', model='fortigateaddressgroup') |
-    Q(app_label='netbox_fortigate', model='fortigateservice') |
-    Q(app_label='netbox_fortigate', model='fortigateservicegroup') |
-    Q(app_label='netbox_fortigate', model='fortigatevip') |
-    Q(app_label='netbox_fortigate', model='fortigatevipgroup') |
-    Q(app_label='netbox_fortigate', model='fortigatescheduleonetime') |
-    Q(app_label='netbox_fortigate', model='fortigateschedulerecurring') |
-    Q(app_label='netbox_fortigate', model='fortigateschedulegroup') |
-    Q(app_label='netbox_fortigate', model='fortigateuser') |
-    Q(app_label='netbox_fortigate', model='fortigateauthenticationserver') 
+    Q(app_label='netbox_fortigate', model='interfaces') |
+    Q(app_label='netbox_fortigate', model='zone') |
+    Q(app_label='netbox_fortigate', model='address') |
+    Q(app_label='netbox_fortigate', model='addressgroup') |
+    Q(app_label='netbox_fortigate', model='services') |
+    Q(app_label='netbox_fortigate', model='servicegroup') |
+    Q(app_label='netbox_fortigate', model='vip') |
+    Q(app_label='netbox_fortigate', model='vipgroup') |
+    Q(app_label='netbox_fortigate', model='scheduleonetime') |
+    Q(app_label='netbox_fortigate', model='schedulerecurring') |
+    Q(app_label='netbox_fortigate', model='schedulegroup') |
+    Q(app_label='netbox_fortigate', model='user') |
+    Q(app_label='netbox_fortigate', model='authenticationserver') 
 )
 
 

@@ -5,30 +5,30 @@ from ..models import *
 
 
 __all__ = (
-    "FortiGateDeviceFilterForm",
-    "FortiGateInterfaceFilterForm",
-    "FortiGateZoneFilterForm",
-    "FortiGateRouteFilterForm",
-    "FortiGateObjectFilterForm"
+    "FortigateFilterForm",
+    "InterfacesFilterForm",
+    "ZoneFilterForm",
+    "RoutingTableFilterForm",
+    "ObjectFilterForm"
 )
 
 
-class FortiGateDeviceFilterForm(NetBoxModelFilterSetForm):
-    model = FortiGateDevice
+class FortigateFilterForm(NetBoxModelFilterSetForm):
+    model = Fortigate
 
-class FortiGateInterfaceFilterForm(NetBoxModelFilterSetForm):
-    model = FortiGateInterface
-
-
-class FortiGateZoneFilterForm(NetBoxModelFilterSetForm):
-    model = FortiGateZone
+class InterfacesFilterForm(NetBoxModelFilterSetForm):
+    model = Interfaces
 
 
-class FortiGateRouteFilterForm(NetBoxModelFilterSetForm):
-    model = FortiGateRoute
+class ZoneFilterForm(NetBoxModelFilterSetForm):
+    model = Zone
 
 
-class FortiGateObjectFilterForm(NetBoxModelFilterSetForm):
-    model = FortiGateObject
+class RoutingTableFilterForm(NetBoxModelFilterSetForm):
+    model = RoutingTable
+
+
+class ObjectFilterForm(NetBoxModelFilterSetForm):
+    model = Object
 
     object_type_id = ContentType.objects.filter(app_label="netbox_fortigate")

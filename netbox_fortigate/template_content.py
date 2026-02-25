@@ -1,6 +1,6 @@
 from netbox.plugins import PluginTemplateExtension
 
-class FortiGateDeviceButtons(PluginTemplateExtension):
+class FortigateButtons(PluginTemplateExtension):
     models = ("dcim.device",)
 
     def buttons(self):
@@ -15,4 +15,4 @@ class FortiGateDeviceButtons(PluginTemplateExtension):
         return self.render("netbox_fortigate/inc/device_pull_inventory_button.html")
 
 
-template_extensions = [FortiGateDeviceButtons]
+template_extensions = [FortigateButtons]
