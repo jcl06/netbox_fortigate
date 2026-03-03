@@ -160,14 +160,15 @@ def cascade_decommissioned(instance, visited=None):
                 related_objects = related_manager.all()
                 model_name = field.related_model.__name__.lower()
 
-                if related_objects and model_name != "fortigateobject":
+                if related_objects and model_name != "object":
                     for item in related_objects:
-                        if not item.is_decommissioned:
-                            updated_time = timezone.localtime()
-                            item.updated_time = updated_time
-                            change = f"{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing status from Decommissioned to Active"
-                            item.is_decommissioned = True;
-                            item.save()
+                        if hasattr(item, 'is_decommissioned'):
+                            if not item.is_decommissioned:
+                                updated_time = timezone.localtime()
+                                item.updated_time = updated_time
+                                change = f"{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing status from Decommissioned to Active"
+                                item.is_decommissioned = True;
+                                item.save()
 
                 # Recurse into related objects
                 for related_object in related_objects:
