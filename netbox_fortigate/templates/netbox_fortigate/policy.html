@@ -56,12 +56,6 @@ Policy ID: {{ object.policyid }}
             <th scope="row">{% trans "NAT" %}</th>
             <td>{% badge object.get_nat_display bg_color=object.get_nat_color %}</td>
           </tr>
-          {% if object.ip_pool == 'enabled' %}
-          <tr>
-            <th scope="row">{% trans "IP Pool" %}</th>
-            <td>{{ object.poolname|placeholder }}</td>
-          </tr>
-          {% endif %}
           <tr>
             <th scope="row">{% trans "Logging" %}</th>
             <td>{{ object.logging|placeholder|bettertitle }}</td>

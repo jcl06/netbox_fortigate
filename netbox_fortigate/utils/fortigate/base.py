@@ -607,8 +607,6 @@ class FORTIGATE:
                     'profile_group': item['profile-group'],
                     'logging': item['logtraffic'],
                     'nat': item['nat'],
-                    'ip_pool': item['ippool'],
-                    'poolname': [i['name'] for i in item['poolname']] if item['poolname'] else [],
                     'groups': [i['name'] for i in item['groups']] if item['groups'] else [],
                     'users': [i['name'] for i in item['users']] if item['users'] else [],
                     'expiry': item['policy-expiry'] if 'policy-expiry' in item else 'disable',

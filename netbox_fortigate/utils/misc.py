@@ -25,7 +25,7 @@ __all__ = (
 def getInterfaces(fortigate_id):
     data = Interfaces.objects.all().filter(is_decommissioned=False)
     if fortigate_id:
-        data = data.filter(device__id=fortigate_id)
+        data = data.filter(fortigate__id=fortigate_id)
     return data
 
 def find_route(address, device=None, interface=None, type=None, src=None):
@@ -458,7 +458,7 @@ class NetworkPathResolver:
             routes = self._find_direct_routes(routes, destination)
             candidate_devices = set([r.fortigate for r in routes])
             if len(candidate_devices) != 1:
-                candidates = queryset.exclude(device__role__in=['edge']).order_by('-route', 'distance', 'metric')
+                candidates = queryset.exclude(fortigate__device__role__slug__in=['edge']).order_by('-route', 'distance', 'metric')
                 best_score = (-candidates[0].route.prefixlen, candidates[0].distance, candidates[0].metric)
                 routes = [r for r in candidates if (-r.route.prefixlen, r.distance, r.metric) == best_score]
             candidate_devices = set([r.fortigate for r in routes])
@@ -466,7 +466,7 @@ class NetworkPathResolver:
             if len(candidate_devices) > 1 and connected:
                 candidates = queryset.filter(
                     next_hop__isnull=True
-                ).exclude(device__role__in=['edge']).order_by('-route', 'distance', 'metric')
+                ).exclude(fortigate__device__role__slug__in=['edge']).order_by('-route', 'distance', 'metric')
                 routes = self._find_shortest_path(candidates, destination)
 
         return routes
