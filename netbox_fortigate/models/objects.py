@@ -63,6 +63,11 @@ class Object(PrimaryModel):
 
     object = GenericForeignKey("object_type", "object_id")
 
+    is_decommissioned = models.BooleanField(
+        verbose_name=_('decommissioned'),
+        default=False
+    )
+
     class Meta:
         ordering = ("fortigate__device__name", "type", "name", "id")
         constraints = [
@@ -111,6 +116,7 @@ class Object(PrimaryModel):
                         self.name = target.name
                     if getattr(target, "fortigate_id", None) and not self.fortigate_id:
                         self.fortigate_id = target.fortigate_id
+                    self.is_decommissioned = getattr(target, 'is_decommissioned', False)
 
         super().save(*args, **kwargs)
 
@@ -709,7 +715,7 @@ class VIP(PrimaryModel):
 
         if isinstance(self.service, list) and self.fortigate:  # Since it's an ArrayField, check if it's a list
             for service_name in self.service:
-                if not Object.objects.filter(name=service_name, is_decommissioned=False, fortigate=self.fortigate).exists():
+                if not Object.objects.filter(name=service_name, type__in=["service", "service group"], is_decommissioned=False, fortigate=self.fortigate).exists():
                     raise ValidationError({'member': f'Member {service_name} does not exist or is decommissioned.'})
                 
         # Check for duplicate name

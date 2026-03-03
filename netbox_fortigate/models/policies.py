@@ -19,7 +19,6 @@ from ipaddress import ip_address, ip_network, IPv4Address, IPv4Network
 __all__ = (
     'Policy',
     'ProfileGroup',
-    'IPPool',
     'UserGroup'
 )
 
@@ -149,21 +148,6 @@ class Policy(PrimaryModel):
         default=NATChoices.DISABLE,
         help_text='Enable/disable source NAT.'
     )
-    ip_pool = models.CharField(
-        verbose_name=_('IP Pool'),
-        max_length=7,
-        choices=(('enable', 'Enable'), ('disable', 'Disable')),
-        default='disable',
-        help_text='Enable to use IP Pools for source NAT.'
-    )
-    poolname = models.ManyToManyField(
-        verbose_name=_('IP Pool Name'),
-        to='netbox_fortigate.IPPool',
-        limit_choices_to={'is_decommissioned': False},
-        blank=True,
-        related_name='%(class)s',
-        help_text='IP Pool names.'
-    )
     groups = models.ManyToManyField(
         verbose_name=_('groups'),
         to='netbox_fortigate.UserGroup',
@@ -282,8 +266,6 @@ class Policy(PrimaryModel):
                 raise ValidationError('Source interface must belong to the same fortigate as the policy.')
             if self.destination_interface.filter(~Q(fortigate=self.fortigate)).exists():
                 raise ValidationError('Destination interface must belong to the same fortigate as the policy.')
-            if self.poolname.filter(~Q(fortigate=self.fortigate)).exists():
-                raise ValidationError('IP Pool must belong to the same fortigate as the policy.')
             if self.groups.filter(~Q(fortigate=self.fortigate)).exists():
                 raise ValidationError('Group must belong to the same fortigate as the policy.')
             if self.users.filter(~Q(fortigate=self.fortigate)).exists():
@@ -438,123 +420,6 @@ class ProfileGroup(PrimaryModel):
         if self.fortigate and self.name and self.get_duplicate_name():
             raise ValidationError({'name': 'Found duplicate name.'})
 
-
-class IPPool(PrimaryModel):
-    fortigate = models.ForeignKey(
-        to='netbox_fortigate.Fortigate',
-        on_delete=models.CASCADE,
-        related_name='%(class)s',
-        limit_choices_to={'role__in': SUPPORTED_POLICY_DEVICE_ROLE},
-    )
-    name = models.CharField(
-        max_length=35
-    )
-    type = models.CharField(
-        verbose_name=_('type'),
-        max_length=22,
-        choices=IPPoolTypeChoices,
-        default=IPPoolTypeChoices.DEFAULT,
-        help_text='IP pool type: overload, one-to-one, fixed-port-range, port-block-allocation.'
-    )
-    startip = HostAddressField(
-        verbose_name=_('Start IP'),
-        default='0.0.0.0',
-        help_text=_('First IPv4 address (inclusive) in the range for the address pool (format xxx.xxx.xxx.xxx, Default: 0.0.0.0).')
-    )
-    endip = HostAddressField(
-        verbose_name=_('End IP'),
-        default='0.0.0.0',
-        help_text=_('Final IPv4 address (inclusive) in the range for the address pool (format xxx.xxx.xxx.xxx, Default: 0.0.0.0).')
-    )
-    startport = models.PositiveIntegerField(
-        verbose_name=_('Start Port'),
-        validators=[MinValueValidator(1024), MaxValueValidator(65535)],
-        default=5117,
-        help_text='First port number (inclusive) in the range for the address pool (1024 - 65535, Default: 5117).'
-    )
-    endport = models.PositiveIntegerField(
-        verbose_name=_('End Port'),
-        validators=[MinValueValidator(1024), MaxValueValidator(65535)],
-        default=65533,
-        help_text='Final port number (inclusive) in the range for the address pool (1024 - 65535, Default: 65533).'
-    )
-    source_startip = HostAddressField(
-        verbose_name=_('Source Start IP'),
-        default='0.0.0.0',
-        help_text=_('First IPv4 address (inclusive) in the range of the source addresses to be translated (format = xxx.xxx.xxx.xxx, default = 0.0.0.0).')
-    )
-    source_endip = HostAddressField(
-        verbose_name=_('Source End IP'),
-        default='0.0.0.0',
-        help_text=_('Final IPv4 address (inclusive) in the range of the source addresses to be translated (format xxx.xxx.xxx.xxx, Default: 0.0.0.0).')
-    )
-    block_size = models.PositiveSmallIntegerField(
-        verbose_name=_('Block Size'),
-        validators=[MinValueValidator(64), MaxValueValidator(4096)],
-        default=128,
-        help_text=_('Number of addresses in a block (64 - 4096, default = 128).')
-    )
-    num_blocks_per_user = models.PositiveSmallIntegerField(
-        verbose_name=_('Port Per User'),
-        validators=[MinValueValidator(1), MaxValueValidator(128)],
-        default=8,
-        help_text=_('Number of addresses blocks that can be used by a user (1 to 128, default = 8).')
-    )
-    arp_reply = models.CharField(
-        verbose_name=_('ARP Reply'),
-        max_length=7,
-        choices=(('enable', 'Enable'), ('disable', 'Disable')),
-        default='enable',
-        help_text=_('Enable/disable replying to ARP requests when an IP Pool is added to a policy (default = enable).')
-    )
-    comments = models.TextField(
-        verbose_name=_('comment'),
-        blank=True,
-        null=True
-    )
-    is_decommissioned = models.BooleanField(verbose_name=_("decommissioned"), default=False)
-    
-    class Meta:
-        ordering = ('fortigate', 'name')
-        constraints = (
-            models.UniqueConstraint(
-                'name', 'fortigate', 'is_decommissioned',
-                condition=Q(is_decommissioned=False),
-                name='%(app_label)s_%(class)s_unique_name'
-            ),
-        )
-        verbose_name = _('IP Pool')
-        verbose_name_plural = _('IP Pools')
-
-    def __str__(self):
-        return f'{self.fortigate} - {self.name}'
-    
-    def get_duplicate_name(self):
-        return IPPool.objects.filter(name=self.name, fortigate=self.fortigate, is_decommissioned=False).exclude(pk=self.pk).exists()
-
-    # Ensure validation is check when creating or updating object in shell or form
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        
-        # Ensure Start IP is not greater than End IP
-        if ip_address(self.startip) > ip_address(self.endip):
-            raise ValidationError({'startip': 'Start IP cannot be greater than End IP.'})
-
-        # Ensure Source Start IP is not greater than Source End IP
-        if ip_address(self.source_startip) > ip_address(self.source_endip):
-            raise ValidationError({'source_startip': 'Source Start-IP cannot be greater than Source End-IP.'})
-
-        # Ensure Start Port is not greater than End Port
-        if self.startport > self.endport:
-            raise ValidationError({'startport': 'Start Port cannot be greater than End Port.'})
-
-        # Check for duplicate name within the same fortigate
-        if self.fortigate and self.name and self.get_duplicate_name():
-            raise ValidationError({'name': 'Found duplicate name.'})
 
 
 class UserGroup(PrimaryModel):

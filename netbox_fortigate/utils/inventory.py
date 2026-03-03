@@ -79,7 +79,6 @@ def update_inventory(fg, DEBUG=False):
             ('schedule_recurring', module.get_schedule_recurring, ScheduleRecurring, update_object),
             ('schedule_groups', module.get_schedule_groups, ScheduleGroup, update_object),
             ('profile_groups', module.get_profile_groups, ProfileGroup, update_object),
-            ('ippools', module.get_ippools, IPPool, update_object),
             ('authentication_servers', module.get_authentication_servers, AuthenticationServer, update_object),
             ('users', module.get_users, User, update_object),
             ('user_groups', module.get_user_groups, UserGroup, update_object),
@@ -198,8 +197,9 @@ def update_routing_table(device=None, data={}, logger=logger):
                     route = RoutingTable.objects.get(interface=interface, route=address) # need to add gateway
                     key_dict = route.__dict__
                     key_dict['interface'] = route.interface.name
-                    if key_dict['gateway'] is None:
-                        key_dict['gateway'] = ''
+                    # if key_dict['gateway'] is None:
+                    key_dict['gateway'] = '' if key_dict['gateway'] is None else key_dict['gateway'].ip
+                    
                     if key_dict['next_hop_id'] is None:
                         key_dict['next_hop'] = None
                     else:
@@ -290,7 +290,8 @@ def update_object(model, device=None, data={}, logger=logger):
                     obj = model.objects.create(fortigate=device, **item) # Create object first
                 except Exception as err:
                     errors.append(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
-                    logging.error(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
+                    logging.exception(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
+                    raise Exception(err)
                     if getattr(settings,'ENV','DEV') == 'PROD':
                         continue
                 logger.info(f'{model.__name__}:{obj.id}: Created "{name}" {model.__name__}')

@@ -158,20 +158,7 @@ class ServiceProtocolChoices(ChoiceSet):
     )
 
 
-class IPPoolTypeChoices(ChoiceSet):
 
-    DEFAULT = 'overload'
-    ONE_TO_ONE = 'one-to-one'
-    FIXED_PORT_RANGE = 'fixed-port-range'
-    PORT_BLOCK_ALLOCATION = 'port-block-allocation'
-
-    CHOICES = (
-        (DEFAULT, 'Overload'),
-        (ONE_TO_ONE, 'One-to-One'),
-        (FIXED_PORT_RANGE, 'Fixed Port Range'),
-        (PORT_BLOCK_ALLOCATION, 'Port Block Allocation')
-
-    )
 
 
 class ActionChoices(ChoiceSet):

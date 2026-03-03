@@ -375,7 +375,7 @@ class RoutingTable(PrimaryModel):
         return self.fortigate.device
 
     def __str__(self):
-        return self.route
+        return str(self.route)
 
     def clean(self):
         super().clean()

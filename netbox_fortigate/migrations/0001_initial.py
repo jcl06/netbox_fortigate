@@ -531,7 +531,7 @@ class Migration(migrations.Migration):
                 ('external_interface', models.CharField(default='any', max_length=15)),
                 ('port_forward', models.CharField(default='enable', max_length=7)),
                 ('status', models.CharField(default='enable', max_length=7)),
-                ('protocol', models.CharField(default='tcp', max_length=4)),
+                ('protocol', models.CharField(default='tcp', max_length=4)),    
                 ('external_port', models.CharField(default='0-65535', max_length=11)),
                 ('mapped_port', models.CharField(default='0-65535', max_length=11)),
                 ('portmapping_type', models.CharField(default='1-to-1', max_length=7)),
