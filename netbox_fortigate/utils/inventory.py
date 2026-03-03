@@ -13,7 +13,7 @@ from datetime import datetime
 from ..utils.api import API
 from ..utils.settings import get_plugin_default
 from ..models import *
-
+from netbox.encryption import decrypt
 
 logger = logging.getLogger(__name__)
 local_tz = pytz.timezone(settings.TIME_ZONE)
@@ -34,8 +34,8 @@ def update_inventory(fg, DEBUG=False):
         hostname = fg.device.name
         data = {
             'ip': fg.mgmt_ip.address.ip,
-            'username': get_plugin_default('fortigates_username', None),
-            'password': get_plugin_default('fortigates_password', None),
+            'username': get_plugin_default('fortigates_username'),
+            'password': decrypt(get_plugin_default('fortigates_password')),
             'port': fg.api_port,
             'device': hostname,
             'vdom': fg.default_vdom

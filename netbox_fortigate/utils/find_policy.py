@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from .settings import get_plugin_default
+from netbox.encryption import decrypt
 
 from ..utils.api import API
 
@@ -33,7 +34,7 @@ def find_policy(device, srcintf, src, dst, protocol=1, port=0, auth_type=None, u
         data = {
             'ip': device.ip_address,
             'username': get_plugin_default('fortigates_username'),
-            'password': get_plugin_default('fortigates_password'),
+            'password': decrypt(get_plugin_default('fortigates_password')),
             'port': get_plugin_default("default_api_port", 443) or 443,
             'device': device
         }
