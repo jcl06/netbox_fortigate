@@ -291,7 +291,6 @@ def update_object(model, device=None, data={}, logger=logger):
                 except Exception as err:
                     errors.append(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
                     logging.exception(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
-                    raise Exception(err)
                     if getattr(settings,'ENV','DEV') == 'PROD':
                         continue
                 logger.info(f'{model.__name__}:{obj.id}: Created "{name}" {model.__name__}')
