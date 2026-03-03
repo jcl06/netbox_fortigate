@@ -13,7 +13,7 @@ def ensure_event_rule(sender, **kwargs):
         return
 
     # What object type to watch
-    watched_ct = ObjectType.objects.get_by_natural_key("netbox_fortigate", "fortigatescheduler")
+    watched_ct = ObjectType.objects.get_by_natural_key("netbox_fortigate", "scheduler")
     notification_ct = ObjectType.objects.get_by_natural_key("extras", "notification")
 
     rule, created = EventRule.objects.get_or_create(
