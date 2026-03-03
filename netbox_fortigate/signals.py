@@ -166,10 +166,6 @@ def cascade_decommissioned(instance, visited=None):
                             updated_time = timezone.localtime()
                             item.updated_time = updated_time
                             change = f"{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing status from Decommissioned to Active"
-                            if item.remarks:
-                                item.remarks = f'{item.remarks}\n{change}'
-                            else:
-                                item.remarks = change
                             item.is_decommissioned = True;
                             item.save()
 

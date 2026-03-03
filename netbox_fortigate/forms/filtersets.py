@@ -9,7 +9,7 @@ __all__ = (
     "InterfacesFilterForm",
     "ZoneFilterForm",
     "RoutingTableFilterForm",
-    "ObjectFilterForm"
+    "ObjectFilterForm",
 )
 
 
@@ -32,3 +32,6 @@ class ObjectFilterForm(NetBoxModelFilterSetForm):
     model = Object
 
     object_type_id = ContentType.objects.filter(app_label="netbox_fortigate")
+
+
+

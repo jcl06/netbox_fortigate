@@ -9,5 +9,6 @@ router.register("interfaces", InterfacesViewSet)
 router.register("routing-table", RoutingTableViewSet)
 # router.register("objects", ObjectViewSet)
 router.register("schedules", SchedulerViewSet)
+router.register("policies", PolicyViewSet)
 
 urlpatterns = router.urls

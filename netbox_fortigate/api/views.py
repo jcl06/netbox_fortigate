@@ -41,3 +41,9 @@ class SchedulerViewSet(NetBoxModelViewSet):
     queryset = models.Scheduler.objects.all()
     serializer_class = serializers.SchedulerSerializer
     filterset_class = filtersets.SchedulerFilterSet
+
+
+class PolicyViewSet(NetBoxModelViewSet):
+    queryset = models.Policy.objects.all()
+    serializer_class = serializers.PolicySerializer
+    filterset_class = filtersets.PolicyFilterSet

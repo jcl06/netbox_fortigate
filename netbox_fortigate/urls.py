@@ -3,7 +3,7 @@ from django.urls import include, path
 from utilities.urls import get_model_urls
 from .models import Scheduler
 from . import views
-from .views.check_policy import PolicyView, DrawPathView, draw_path, policy_view
+from .views.check_policy import PolicyView, DrawPathView
 
 app_name = "netbox_fortigate"
 
@@ -46,6 +46,10 @@ urlpatterns = [
 
     path("devices/<int:pk>/pull-inventory/", views.FortigatePullInventoryView.as_view(), name="device_pull_inventory",),
 
+    # Policy
+    path("policies/", views.PolicyListView.as_view(), name="policy_list"),
+    path("policies/delete/", views.PolicyBulkDeleteView.as_view(), name="policy_bulk_delete"),
+    path('policies/<int:pk>/', include(get_model_urls('netbox_fortigate', 'policy'))),
 
     # Requests placeholder for now
     path("requests/", views.requests_placeholder, name="requests"),

@@ -1,60 +1,125 @@
-{% extends 'base/layout.html' %}
-{% load static %}
+{% extends 'generic/object.html' %}
+{% load i18n %}
 
-{% block head %}
-{% endblock %}
-{% block content-header %}
-    <ol class="small breadcrumb mt-2">
-        <li class="breadcrumb-item"><a href="#">Network Automation</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'task' %}">{{ menu }}</a></li>
-        <li class="breadcrumb-item active">{{ title }}</li>
-    </ol>
-    <h5 class="mb-3 text-uppercase">{{ title }}</h5>
+
+{% block title %}
+{% if object.name %}
+{{ object.name }}
+{% else %}
+Policy ID: {{ object.policyid }}
+{% endif %}
+{% endblock title %}
+
+{% block breadcrumbs %}
+  {{ block.super }}
+  <li class="breadcrumb-item">
+    <a href="{% url 'plugins:netbox_fortigate:policy_list' %}?fortigate_id={{ object.fortigate.pk }}">{{ object.fortigate }}</a>
+  </li>
 {% endblock %}
 
-{% block page %}
-    <div class="mt-3">
-        <!--input type="hidden" id='csrf_token' name="csrfmiddlewaretoken" value="{{ csrf_token }}"-->
-        {% if policy %}
-        <div class="d-flex flex-column inner-div">
-            <table>
-                {% for key, value in policy.items %}
-                    <tr>
-                        <td style="width: 105px;">{{ key }}:</td>
-                        <td {% if key|lower == 'action' %}class="{{ value|lower }}"{% endif %}>{{ value }}</td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        {% endif %}
-        {% if error %}
-            <p>{{ error }}</p>
-        {% endif %}
-        
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col col-12 col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Policy" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Fortigate" %}</th>
+            <td>{{ object.fortigate|linkify }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Policy ID" %}</th>
+            <td>{{ object.policyid }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Name" %}</th>
+            <td>{{ object.name }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Action" %}</th>
+            <td>{% badge object.get_action_display bg_color=object.get_action_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Schedule" %}</th>
+            <td>{{ schedule|placeholder }} </td>
+          </tr>        
+          <tr>
+            <th scope="row">{% trans "Expiry Date" %}</th>
+            <td>{{ object.expiry_date|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Inspection Mode" %}</th>
+            <td>{{ object.inspection_mode|placeholder|bettertitle }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "NAT" %}</th>
+            <td>{% badge object.get_nat_display bg_color=object.get_nat_color %}</td>
+          </tr>
+          {% if object.ip_pool == 'enabled' %}
+          <tr>
+            <th scope="row">{% trans "IP Pool" %}</th>
+            <td>{{ object.poolname|placeholder }}</td>
+          </tr>
+          {% endif %}
+          <tr>
+            <th scope="row">{% trans "Logging" %}</th>
+            <td>{{ object.logging|placeholder|bettertitle }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Status" %}</th>
+            <td>{% badge object.get_status_display bg_color=object.get_status_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Comments" %}</th>
+            <td>
+                {% if object.comments %}
+                <span class="font-monospace small">{{ object.comments|linebreaksbr }}</span>
+                {% else %}
+                <span class="text-muted">{% trans "None" %}</span>
+                {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
-{% endblock %}
-
-{% block script %}
-<style>
-    table {
-        width: 800px;
-        font-size: 12px;
-    }
-    td:first-child {
-        align-content: start;
-        font-weight: bold;
-    }
-    td {
-        padding: 0 5px;
-    }
-    .accept {
-        color: green;
-        font-weight: bold;
-    }
-    .deny {
-        color: red;
-        font-weight: bold;
-    }
     
-</style>
+    <div class="col col-12 col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans "Source & Destination" %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row" class="w-25">{% trans "Incoming Interface/Zone" %}</th>
+            <td>{{ source_interface|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Outgoing Interface/Zone" %}</th>
+            <td>{{ destination_interface|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Source Address" %}</th>
+            <td>{{ source_address|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Destination Address" %}</th>
+            <td>{{ destination_address|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">{% trans "Destination Ports" %}</th>
+            <td>{{ services|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">{% trans "Allowed Users" %}</h2>
+        <div class="card-body">
+            {% if users %}
+            <span class="font-monospace small">{{ users|linebreaksbr }}</span>
+            {% else %}
+            <span class="text-muted">{% trans "None" %}</span>
+            {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 {% endblock %}

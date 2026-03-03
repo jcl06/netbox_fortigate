@@ -19,3 +19,25 @@ svg {
 .node-symbol { font-size: 20px; text-anchor: middle; font-weight: 500;}
 .node-symbol.allow { fill: green; }
 .node-symbol.deny, .node-symbol.unknown { fill: red; }
+
+
+body[data-bs-theme="dark"] #topology image.node {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+body[data-bs-theme="dark"] #topology line {
+  stroke: #00FF00;
+}
+
+body[data-bs-theme="dark"] #topology text.node-symbol.allow {
+  fill: #00FF00;
+}
+
+
+body[data-bs-theme="dark"] #topology text.node {
+  fill: white;
+}
+
+body[data-bs-theme="dark"] #topology text.host_label {
+  fill: white;
+}

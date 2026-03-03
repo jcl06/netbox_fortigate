@@ -172,3 +172,40 @@ class IPPoolTypeChoices(ChoiceSet):
         (PORT_BLOCK_ALLOCATION, 'Port Block Allocation')
 
     )
+
+
+class ActionChoices(ChoiceSet):
+    key = 'Policy.action'
+
+    ACCEPT = 'accept'
+    DENY = 'deny'
+    IPSEC = 'ipsec'
+
+    CHOICES = [
+        (ACCEPT, _('Accept'), 'green'),
+        (DENY, _('Deny'), 'red'),
+        (IPSEC, _('IPSec'), 'gray'),
+    ]
+
+
+class StatusChoices(ChoiceSet):
+    key = 'Policy.status'
+
+    ENABLE = 'enable'
+    DISABLE = 'disable'
+
+    CHOICES = [
+        (ENABLE, _('Enable'), 'green'),
+        (DISABLE, _('Disable'), 'gray'),
+    ]
+
+class NATChoices(ChoiceSet):
+    key = 'Policy.nat'
+
+    ENABLE = 'enable'
+    DISABLE = 'disable'
+
+    CHOICES = [
+        (ENABLE, _('Enable'), 'green'),
+        (DISABLE, _('Disable'), 'gray'),
+    ]

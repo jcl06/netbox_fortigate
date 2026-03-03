@@ -15,7 +15,7 @@ from .. import forms, tables, filtersets
 from ..models import *
 from ..jobs import InventoryPullRunner, RequestRunner
 from ..choices import JobTypeChoices
-
+from ..utils.policy_lookups import get_objects_values
 
 @register_model_view(Fortigate, 'list', path='', detail=False)
 class FortigateListView(generic.ObjectListView):
@@ -145,6 +145,7 @@ class ObjectListView(generic.ObjectListView):
     table = tables.ObjectTable
     filterset = filtersets.ObjectFilterSet
     filterset_form = forms.ObjectFilterForm
+    actions = (BulkExport, BulkDelete)
 
 
 @register_model_view(Object)
@@ -162,7 +163,7 @@ class ObjectDeleteView(generic.ObjectDeleteView):
     queryset = Object.objects.all()
 
 
-class FortiGatObjectBulkDeleteView(generic.BulkDeleteView):
+class ObjectBulkDeleteView(generic.BulkDeleteView):
     queryset = Object.objects.all()
     filterset = filtersets.ObjectFilterSet
     table = tables.ObjectTable
@@ -256,6 +257,7 @@ class ScheduleListView(generic.ObjectListView):
     queryset = Scheduler.objects.all()
     table = tables.SchedulerTable
     filterset = filtersets.SchedulerFilterSet
+    actions = (BulkExport, BulkDelete)
 
 
 @register_model_view(Scheduler)
@@ -303,3 +305,41 @@ class SchedulerJobsView(generic.ObjectJobsView):
     
 
 
+
+@register_model_view(Policy)
+class PolicyView(GetRelatedModelsMixin, generic.ObjectView):
+    queryset = Policy.objects.all()
+
+    def get_extra_context(self, request, instance):
+        users = []
+        if instance.users.all():
+            users.extend(get_objects_values(instance.users.all(), False, "User"))
+        if instance.groups.all():
+            users.extend(get_objects_values(instance.groups.all(), False, "UserGroup"))
+
+        return {
+            'related_models': self.get_related_models(request, instance),
+            'schedule': get_objects_values([instance.schedule], True),
+            'source_interface': get_objects_values(instance.source_interface.all(), True),
+            'destination_interface': get_objects_values(instance.destination_interface.all(), True),
+            'source_address': get_objects_values(instance.source_address.all(), True),
+            'destination_address': get_objects_values(instance.destination_address.all(), True),
+            'services': get_objects_values(instance.service.all(), True),
+            'users': ", ".join(users),
+        }
+
+class PolicyListView(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = Policy.objects.all()
+    table = tables.PolicyTable
+    filterset = filtersets.PolicyFilterSet
+
+@register_model_view(Policy, 'delete')
+class PolicyDeleteView(generic.ObjectDeleteView):
+    queryset = Policy.objects.all()
+
+
+class PolicyBulkDeleteView(generic.BulkDeleteView):
+    queryset = Policy.objects.all()
+    table = tables.PolicyTable
+    filterset = filtersets.PolicyFilterSet

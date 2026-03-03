@@ -125,7 +125,7 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
     class Meta:
         name = "Inventory Pull"
 
-    def run(self, schedule_id=None, fg_id=None, data=None, *args, **kwargs):
+    def run(self, schedule_id=None, fortigate_id=None, data=None, *args, **kwargs):
         # ensure metadata exists before we write started_at/finished_at
         self.seed_job_data(data=data)
 
@@ -135,8 +135,8 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         DEBUG = get_plugin_default("DEBUG", False)
         max_workers = get_plugin_default("inventory_max_workers", 10)
 
-        if fg_id:
-            devices = list(Fortigate.objects.filter(pk=fg_id))
+        if fortigate_id:
+            devices = list(Fortigate.objects.filter(pk=fortigate_id))
         else:
             schedule = Scheduler.objects.get(pk=schedule_id)
             if not schedule.enabled:
@@ -147,27 +147,27 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         items: list[dict] = []
         failed = success = with_errors = 0
 
-        def worker(fg_id: int):
+        def worker(id: int):
             close_old_connections()
-            fg = Fortigate.objects.get(pk=fg_id)
+            fg = Fortigate.objects.get(pk=id)
 
             # IMPORTANT: do not rewrite update_inventory here; just call it
             # Expected return: [ok(bool), state_or_error(str), items(list)]
             result = update_inventory(fg, DEBUG=DEBUG)
-            return fg_id, result
+            return id, result
 
         results_by_id = {}
 
         if max_workers <= 1 or len(devices) <= 1:
             for fg in devices:
-                fg_id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG)
-                results_by_id[fg_id] = result
+                id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG)
+                results_by_id[id] = result
         else:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
                 futures = [pool.submit(worker, fg.pk) for fg in devices]
                 for fut in as_completed(futures):
-                    fg_id, result = fut.result()
-                    results_by_id[fg_id] = result
+                    id, result = fut.result()
+                    results_by_id[id] = result
 
         # ---- process results (ported from process_inventory_results) ----
         for fg in devices:
@@ -237,7 +237,7 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         self.update_job_data(finished_at=timezone.now().isoformat())
                 
         # ---- RESCHEDULE IF CRON ----
-        if not fg_id:
+        if not fortigate_id:
             if schedule.schedule_mode == ScheduleModeChoices.CRON:
                 next_dt = compute_next_run(schedule).dt
                 self.__class__.enqueue_once(
@@ -251,6 +251,7 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
                 )
 
         if state == "Failed":
+            self.logger.error(f"Inventory pull failed for {failed} device(s)")
             raise RuntimeError(f"Inventory pull failed for {failed} device(s)")
 
 

@@ -30,5 +30,6 @@ class NetBoxFortigateConfig(PluginConfig):
             
         register_model_view(Device, name="fortigate", path="fortigate")(DeviceJobsTabView)
 
-        
+        from .navigation import update_menu
+        update_menu()
 config = NetBoxFortigateConfig

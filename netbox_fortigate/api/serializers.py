@@ -38,3 +38,10 @@ class SchedulerSerializer(NetBoxModelSerializer):
     class Meta:
         model = Scheduler
         fields = "__all__"
+
+
+
+class PolicySerializer(NetBoxModelSerializer):
+    class Meta:
+        model = Policy
+        fields = "__all__"

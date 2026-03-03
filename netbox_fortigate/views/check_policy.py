@@ -5,6 +5,7 @@ from django.templatetags.static import static
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.views import View
 from django.utils import timezone
+from django.urls import reverse
 
 from ..utils.policy_lookups import is_connection_allowed, get_objects_values
 from ..models import Fortigate, Policy, Object
@@ -87,11 +88,14 @@ class DrawPathView(PermissionRequiredMixin, View):
                 "class": "node",
                 "status": "allow",
                 "policy_id": "",
+                "url": ""
             }]
 
             for fortigate, value in path.items():
                 src_intf = value["src"][0]
                 dst_intf = value["dst"][0]
+                policy = Policy.objects.none()
+                url = fortigate.get_absolute_url()
 
                 if policies[fortigate]["status"] == "allow":
                     policy_id = policies[fortigate]["policies"]["allow"][0]
@@ -99,6 +103,15 @@ class DrawPathView(PermissionRequiredMixin, View):
                     policy_id = policies[fortigate]["policies"]["deny"][0]
                 else:
                     policy_id = "Implicit Deny"
+
+                if policy_id != "Implicit Deny":
+                    policy =  Policy.objects.filter(fortigate=fortigate, policyid=int(policy_id))
+
+                if policy.exists():
+                    policy = policy.first()
+                    url = policy.get_absolute_url()
+                else:
+                    url = f'{reverse("plugins:netbox_fortigate:policy_list")}?fortigate_id={fortigate.id}'
 
                 items.append({
                     "name": fortigate.device.name,
@@ -114,6 +127,8 @@ class DrawPathView(PermissionRequiredMixin, View):
                     "status": policies[fortigate]["status"],
                     "policy_id": policy_id,
                     "fortigate_id": fortigate.id,
+                    "url": url
+
                 })
 
             items.append({
@@ -125,6 +140,7 @@ class DrawPathView(PermissionRequiredMixin, View):
                 "class": "node",
                 "status": "allow",
                 "policy_id": "",
+                "url": ""
             })
 
             topo_status = draw_topology(items)
@@ -144,124 +160,6 @@ class DrawPathView(PermissionRequiredMixin, View):
         except Exception as err:
             logger.exception(err)
             return JsonResponse({"status": "Failed", "message": "Internal error."}, status=500)
-
-@csrf_exempt
-def draw_path(request):
-    data = None
-    try:
-        if request.method == 'GET':
-            context = {}
-            return render(request, 'netbox_fortigate/check_policy_form.html', context=context)
-        data = json.loads(request.POST['data'])
-        if 'src' not in data:
-            logger.info("Key (src) not found\n{0}".format(data))
-            raise Error("Invalid Request")
-        src = data['src']
-        if 'dst' not in data:
-            logger.info("Key (dst) not found\n{0}".format(data))
-            raise Error("Invalid Request")
-        dst = data['dst']
-        if 'protocol' not in data:
-            logger.info("Key (protocol) not found\n{0}".format(data))
-            raise Error("Invalid Request")
-        protocol = data['protocol']
-        if 'port' not in data:
-            logger.info("Key (port) not found\n{0}".format(data))
-            raise Error("Invalid Request")
-        auth_type = ''
-        username = ''
-        # if 'auth_type' in data:
-        #     if data['auth_type']:
-        #         auth_type = data['auth_type']
-        if 'username' in data:
-            if data['username']:
-                username = data['username']
-                auth_type = 'user'
-        port = data['port']
-        if protocol != 'icmp' and not port:
-            raise APIError("Port number is empty")
-        icmptype = None
-        if protocol == 'icmp':
-            icmptype = port
-        if not src:
-            raise APIError("Source Address is empty")
-        if not dst:
-            raise APIError("Destination Address is empty")
-        
-        # Track submission count
-        submission_count = track_submission(request, src, dst, protocol, port, username)
-        logger.info(f"Submission count for ({src}, {dst}, {protocol}, {port}, {username}): {submission_count}")
-
-            
-        status = is_connection_allowed(src, dst, protocol, port, auth_type, username, icmptype, submission_count)
-        if not status[0]:
-            raise APIError(status[1])
-        policies = status[1]
-        path = status[2]
-        items = [
-            {
-                "name": src,
-                "image": "img/host.png",
-                "type": "host",
-                "ip": "",
-                "role": "src_host",
-                "class": "node",
-                "status": 'allow',
-                "policy_id": '',
-            }
-        ]
-
-        for fortigate, value in path.items():
-            item = {'name': fortigate.device.name, 'type': 'node', 'ip': fortigate.mgmt_ip,
-                    'role': fortigate.role.lower(), 'class': f'node fortigate',
-                    'interfaces': [], 'image': "img/fortigate.png", 'status': policies[fortigate]['status']}
-            item['interfaces'].append(value['src'][0].zone.name if value['src'][0].zone and not value['src'][0].zone.is_decommissioned else value['src'][0].name)
-            item['interfaces'].append(value['dst'][0].zone.name if value['dst'][0].zone and not value['dst'][0].zone.is_decommissioned else value['dst'][0].name)
-            # item['interfaces'].append(value['src'][0].name)
-            # item['interfaces'].append(value['dst'][0].name)
-            if policies[fortigate]['status'] == 'allow':
-                policy_id = policies[fortigate]['policies']['allow'][0]
-            elif policies[fortigate]['policies']['deny']:
-                policy_id = policies[fortigate]['policies']['deny'][0]
-            else:
-                policy_id = 'Implicit Deny'
-            item['policy_id'] = policy_id
-            item['fortigate_id'] = fortigate.id
-            items.append(item)
-        items.append(
-            {
-                "name": dst,
-                "image": "img/host.png",
-                "type": "host",
-                "ip": f'{protocol.upper()}/{port}' if protocol != 'icmp' else f'{protocol.upper()}/8',
-                "role": "dst_host",
-                "class": "node",
-                "status": 'allow',
-                "policy_id": '',
-            }
-        )
-        if data:
-            status = draw_topology(items)
-            if not status[0]:
-                raise Exception(status[1])
-            context = status[1]
-            context['src'] = src
-            context['dst'] = dst
-            context['protocol'] = protocol
-            context['port'] = port
-            context['status'] = 'Success'
-            print(context)
-            return JsonResponse(context)
-    except APIError as err:
-        return JsonResponse({'status': 'Failed', 'message': str(err).replace('\n', '<br>')})
-    except Error:
-        if data:
-            logger.info('Invalid Request.\nData:\n{0}'.format(data))
-        return HttpResponse(status=400)
-    except Exception as err:
-        logger.exception(err)
-        return HttpResponse(status=500)
-
 
 def draw_topology(data):
     """
@@ -292,6 +190,7 @@ def draw_topology(data):
                 'class': item['class'],
                 'status': item['status'],
                 'policy_id': item['policy_id'],
+                'url': item['url'],
                 'ip': item['ip'],
                 'x': x_offset + i * node_spacing,
                 'y': y_position,
@@ -374,39 +273,6 @@ def draw_topology(data):
         return output
 
 
-def get_interfaces(request):
-    fortigate_id = request.GET.get('fortigate_id')
-    data = getInterfaces(fortigate_id)
-    results = [{'id': item.id, 'text': item.name} for item in data]
-    return JsonResponse(results, safe=False)
-
-
-
-def get_filtered_fields(request):
-    fortigate = request.GET.get('fortigate')
-    if fortigate:
-        # Filter services based on the fortigate
-        services = []
-        for item in Object.objects.filter(fortigate=fortigate, type__in=['service', 'servicegroup']):
-            services.append({'id': item.id, 'name': item.object.name})
-        source_address = []
-        for item in Object.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup']):
-            source_address.append({'id': item.id, 'name': item.object.name})
-        destination_address = []
-        for item in Object.objects.filter(fortigate=fortigate, type__in=['address', 'addressgroup', 'vip', 'vipgroup']):
-            destination_address.append({'id': item.id, 'name': item.object.name})
-
-        # Return the filtered results as JSON
-        return JsonResponse({
-            'services': list(services),
-            'source_address': list(source_address),
-            'destination_address': list(destination_address),
-        })
-    return JsonResponse({
-        'services': [],
-        'source_address': [],
-        'destination_address': []
-    })
 
 
 def track_submission(request, src, dst, protocol, port, user_group):
@@ -432,8 +298,8 @@ def track_submission(request, src, dst, protocol, port, user_group):
 
 class PolicyView(PermissionRequiredMixin, View):
     permission_required = (
-        "dcim.view_device",
-        "netbox_fortigate.view_fortigatepolicy"
+        "netbox_fortigate.view_fortigate",
+        "netbox_fortigate.view_policy"
     ) 
 
     def get(self, request, fortigate=None, pid=None, *args, **kwargs):
@@ -494,46 +360,3 @@ class PolicyView(PermissionRequiredMixin, View):
 
         return render(request, "netbox_fortigate/policy.html", context=context)
     
-
-@csrf_exempt
-def policy_view(request, fortigate=None, pid=None):
-    context = {}
-    error = None
-    try:
-        if fortigate and pid:
-            fortigate = Fortigate.objects.filter(id=fortigate).first()
-            if fortigate:
-                obj = Policy.objects.filter(fortigate=fortigate, is_decommissioned=False, policyid=pid).first()
-                policy = {}
-                users = []
-                if obj:
-                    policy['Device'] = obj.fortigate.device.name
-                    policy['ID'] = obj.id
-                    policy['PID'] = obj.policyid
-                    policy['Policy Name'] = obj.name if obj.name else ''
-                    policy['Source'] = get_objects_values(obj.source_address.all(), True)
-                    policy['Destination'] = get_objects_values(obj.destination_address.all(), True)
-                    policy['Schedule'] = get_objects_values([obj.schedule], True)
-                    policy['Service'] = get_objects_values(obj.service.all(), True)
-                    policy['Action'] = obj.action.upper()
-                    if obj.expiry_date:
-                        policy['Expiration Date'] = timezone.localtime(obj.expiry_date).strftime("%B %d, %Y %H:%M")
-                    if obj.users.all():
-                        users.extend(get_objects_values(obj.users.all(), False, 'User'))
-                    if obj.groups.all():
-                        users.extend(get_objects_values(obj.groups.all(), False, 'UserGroup'))
-                    if users:
-                        policy['Users'] = ', '.join(users)
-                    context['policy'] = policy
-                else:
-                    error = f"Local DB has no record yet for Policy ID {pid} of {str(fortigate)}"
-            else:
-                error= "Device does not exist."
-    except Exception as err:
-        logger.exception(err)
-        error = str(err)
-    if error:
-        context['error'] = error
-    return render(request, 'netbox_fortigate/policy.html', context=context)
-
-

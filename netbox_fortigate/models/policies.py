@@ -64,8 +64,8 @@ class Policy(PrimaryModel):
     )
     action = models.CharField(
         max_length=10,
-        choices=(('accept', 'Accept'), ('deny', 'Deny'), ('ipsec', 'IPsec')),
-        default='accept',
+        choices=ActionChoices,
+        default=ActionChoices.ACCEPT,
         help_text='Policy action (accept/deny/ipsec).'
     )
     '''nat64 = models.CharField(
@@ -145,8 +145,8 @@ class Policy(PrimaryModel):
     nat = models.CharField(
         verbose_name=_('NAT'),
         max_length=7,
-        choices=(('enable', 'Enable'), ('disable', 'Disable')),
-        default='disable',
+        choices=NATChoices,
+        default=NATChoices.DISABLE,
         help_text='Enable/disable source NAT.'
     )
     ip_pool = models.CharField(
@@ -298,6 +298,17 @@ class Policy(PrimaryModel):
         # Check for duplicate name within the same fortigate
         if self.fortigate and self.name and self.get_duplicate_name():
             raise ValidationError({'name': 'Found duplicate name.'})
+        
+    def get_status_color(self):
+        return StatusChoices.colors.get(self.status)
+
+    def get_nat_color(self):
+        return NATChoices.colors.get(self.nat)
+    
+    def get_action_color(self):
+        return ActionChoices.colors.get(self.action)
+
+
         
         
     @staticmethod
