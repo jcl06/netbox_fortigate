@@ -240,7 +240,7 @@ class FortigatePullInventoryView(ObjectPermissionRequiredMixin, View):
             instance=fg,
             user=request.user,
             name=f"{InventoryPullRunner.name}: {device.name}",
-            fg_id=fg.pk,
+            fortigate_id=fg.pk,
             data={
                 "trigger": "manual",
                 "fortigate_id": fg.pk,
