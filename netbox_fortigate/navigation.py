@@ -62,6 +62,14 @@ jobs_menu_items = (
         link="plugins:netbox_fortigate:scheduler_list",
         link_text=_("Schedules"),
         permissions=["netbox_fortigate.view_scheduler"],
+        buttons=(
+            PluginMenuButton(
+                link="plugins:netbox_fortigate:scheduler_add",
+                title=_("Add Job Schedule"),
+                icon_class="mdi mdi-plus-thick",
+                permissions=["netbox_fortigate.add_scheduler"],
+            ),
+        ),
     ),
 )
 

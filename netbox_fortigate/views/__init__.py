@@ -257,7 +257,7 @@ class ScheduleListView(generic.ObjectListView):
     queryset = Scheduler.objects.all()
     table = tables.SchedulerTable
     filterset = filtersets.SchedulerFilterSet
-    actions = (BulkExport, BulkDelete)
+    actions = (AddObject, BulkExport, BulkDelete)
 
 
 @register_model_view(Scheduler)
