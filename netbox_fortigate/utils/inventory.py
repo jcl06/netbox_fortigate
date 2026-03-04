@@ -143,7 +143,9 @@ def update_device(fortigate=None, data={}, logger=logger, job=None):
         updated_time = timezone.localtime()
         if not fortigate:
             raise Exception('No device')
-        hostname = f"{fortigate.device.name} - {fortigate.default_vdom}" if fortigate.default_vdom != 'root' else fortigate.device.name
+        hostname = fortigate.device.name
+        if fortigate.default_vdom != 'root' and fortigate.default_vdom not in fortigate.device.name:
+            hostname = f"{fortigate.device.name} - {fortigate.default_vdom}"
         if data:
             if fortigate.pk and hasattr(fortigate.device, 'snapshot'):
                     fortigate.device.snapshot()
