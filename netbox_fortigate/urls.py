@@ -1,7 +1,6 @@
 from django.urls import include, path
 
 from utilities.urls import get_model_urls
-from django.contrib import admin
 from .models import Scheduler
 from . import views
 from .views.check_policy import PolicyView, DrawPathView
@@ -10,7 +9,6 @@ app_name = "netbox_fortigate"
 
 urlpatterns = [
     # Fortigate CRUD
-    path('admin/', admin.site.urls),
     path('firewalls/', include(get_model_urls('netbox_fortigate', 'fortigate', detail=False))),
     # path("firewalls/", views.FortigateListView.as_view(), name="fortigatedevice_list"),
     # path("firewalls/add/", views.FortigateEditView.as_view(), name="fortigatedevice_add"),
