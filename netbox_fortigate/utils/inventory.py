@@ -291,8 +291,7 @@ def update_object(model, device=None, data={}, logger=logger):
                 except Exception as err:
                     errors.append(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
                     logging.exception(f'{model.__name__}: Unable to create {model.__name__} object due to {err} \nData: {item}')
-                    if getattr(settings,'ENV','DEV') == 'PROD':
-                        continue
+                    continue
                 logger.info(f'{model.__name__}:{obj.id}: Created "{name}" {model.__name__}')
                 # **Set Many-to-Many relationships after saving**
                 for m2m_field_name, values in m2m_fields.items():
