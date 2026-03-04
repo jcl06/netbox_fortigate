@@ -18,10 +18,10 @@ class InterfacesViewSet(NetBoxModelViewSet):
     filterset_class =  filtersets.InterfacesFilterSet
 
 
-# class ZoneViewSet(NetBoxModelViewSet):
-#     queryset = models.Zone.objects.select_related("fortigate__device").prefetch_related("interface").all()
-#     serializer_class = serializers.ZoneSerializer
-#     filterset_class =  filtersets.ZoneFilterSet
+class ZoneViewSet(NetBoxModelViewSet):
+    queryset = models.Zone.objects.select_related("fortigate__device").prefetch_related("interface").all()
+    serializer_class = serializers.ZoneSerializer
+    filterset_class =  filtersets.ZoneFilterSet
 
 
 
@@ -31,10 +31,10 @@ class RoutingTableViewSet(NetBoxModelViewSet):
     filterset_class =  filtersets.RoutingTableFilterSet
 
 
-# class ObjectViewSet(NetBoxModelViewSet):
-#     queryset = models.Object.objects.select_related("fortigate__device", "object_type").all()
-#     serializer_class = serializers.ObjectSerializer
-#     filterset_class =  filtersets.ObjectFilterSet
+class ObjectViewSet(NetBoxModelViewSet):
+    queryset = models.Object.objects.select_related("fortigate__device", "object_type").all()
+    serializer_class = serializers.ObjectSerializer
+    filterset_class =  filtersets.ObjectFilterSet
 
 
 class SchedulerViewSet(NetBoxModelViewSet):

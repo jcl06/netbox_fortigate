@@ -16,10 +16,10 @@ class InterfacesSerializer(NetBoxModelSerializer):
         fields = "__all__"
 
 
-# class ZoneSerializer(NetBoxModelSerializer):
-#     class Meta:
-#         model = Zone
-#         fields = "__all__"
+class ZoneSerializer(NetBoxModelSerializer):
+    class Meta:
+        model = Zone
+        fields = "__all__"
 
 
 class RoutingTableSerializer(NetBoxModelSerializer):
@@ -28,10 +28,10 @@ class RoutingTableSerializer(NetBoxModelSerializer):
         fields = "__all__"
 
 
-# class ObjectSerializer(NetBoxModelSerializer):
-#     class Meta:
-#         model = Object
-#         fields = "__all__"
+class ObjectSerializer(NetBoxModelSerializer):
+    class Meta:
+        model = Object
+        fields = "__all__"
 
 
 class SchedulerSerializer(NetBoxModelSerializer):

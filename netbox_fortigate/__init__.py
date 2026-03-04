@@ -17,7 +17,7 @@ class NetBoxFortigateConfig(PluginConfig):
         from utilities.views import register_model_view
         from dcim.models import Device
         from netbox_fortigate.views.device_tabs import DeviceJobsTabView
-        from . import signals # noqa
+        from . import signals, logging # noqa
         from . import event_rules
     
 
@@ -32,4 +32,6 @@ class NetBoxFortigateConfig(PluginConfig):
 
         from .navigation import update_menu
         update_menu()
+
+        
 config = NetBoxFortigateConfig
