@@ -125,7 +125,7 @@ def update_inventory(fg, DEBUG=False):
         return output
 
 
-def update_device(device=None, data={}, logger=logger):
+def update_device(fortigate=None, data={}, logger=logger):
     """
         To update Device data
     """
@@ -134,26 +134,28 @@ def update_device(device=None, data={}, logger=logger):
     
     try:
         updated_time = timezone.localtime()
-        if not device:
+        if not fortigate:
             raise Exception('No device')
-        hostname = device.device.name
+        hostname = f"{fortigate.device.name} - {fortigate.default_vdom}" if fortigate.default_vdom != 'root' else fortigate.device.name
         if data:
-            if device.pk and hasattr(device, 'snapshot'):
-                    device.snapshot()
-            if data['version'] and data['version'] != device.fortios_version:
-                changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing OS Version from "{device.fortios_version}" to "{data['version']}"')
-                logger.info(f'Changing OS Version from "{device.fortios_version}" to "{data['version']}"')
-                device.fortios_version = data['version']
-            if data['vdom'] and data['vdom'] != device.default_vdom:
-                changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing VDOM from "{device.default_vdom}" to "{data['vdom']}"')
-                logger.info(f' Changing VDOM from "{device.default_vdom}" to "{data['vdom']}"')
-                device.default_vdom = data['vdom']
-            if data['hostname'] and data['hostname'] != hostname:
-                changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing hostname from "{hostname}" to "{data['hostname']}"')
-                logger.info(f' Changing VDOM from "{device.default_vdom}" to "{data['hostname']}"')
-                hostname = data['hostname']
+            if fortigate.pk and hasattr(fortigate.device, 'snapshot'):
+                    fortigate.device.snapshot()
+            if data['version'] and data['version'] != fortigate.fortios_version:
+                changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
+                logger.info(f'Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
+                fortigate.fortios_version = data['version']
+            if data['vdom'] and data['vdom'] != fortigate.default_vdom:
+                changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"')
+                logger.info(f' Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"')
+                fortigate.default_vdom = data['vdom']
+            if data['hostname']:
+                hname = f"{data['hostname']} - {data['vdom']}" if data['vdom'] != 'root' else data['hostname']
+                if hname != hostname and get_plugin_default('SYNC_HOSTNAME', True):
+                    logger.info(f' Changing hostname from "{hostname}" to "{hname}"')
+                    fortigate.device.name = hname
+                    fortigate.device.save()
             if changes:
-                device.save()
+                fortigate.save()
         output = [True, 'Success']
     except Exception as err:
         logger.exception(err)
