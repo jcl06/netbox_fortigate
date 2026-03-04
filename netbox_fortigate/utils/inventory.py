@@ -22,7 +22,7 @@ __all__ = (
     'update_inventory',
 )
 
-def update_inventory(fg, DEBUG=False):
+def update_inventory(fg, DEBUG=False, job=None):
     output = [False, 'Unknown']
     module = None
     vdom = None
@@ -60,7 +60,7 @@ def update_inventory(fg, DEBUG=False):
             'vdom': module.vdom
         }
             
-        status = update_device(fg, device_data, logger=logger)
+        status = update_device(fg, device_data, logger=logger, job=job)
         if not status[0]:
             raise Exception(status[1])
 
@@ -104,14 +104,21 @@ def update_inventory(fg, DEBUG=False):
                     state = 'Successful with Errors'
                 d['status'] = 'Failed'
                 d['errors'] = [status[1]]
-                error_with 
                 items.append(d)
+                if job:
+                    job.logger.error(status[1])
             elif len(status) == 3:
                 state = d['status'] = 'Successful with Errors'
                 d['errors'] = status[2]
                 items.append(d)
+                if job:
+                    job.logger.warning(f"Pulling {category_name} of {hostname} has completed with errors.")
+                    job.logger.warning(f"Errors: {status[2]}")
             if state == 'Failed' and status[0]:
                 state = 'Successful'
+            if job and status[0]:
+                job.logger.info(f"Pulling {category_name} of {hostname} has successfully completed.")
+            
         if state ==  'Successful':
             items = [{'device': hostname, 'type': 'All Inventory', 'status': 'All Successful'}]
             
@@ -125,7 +132,7 @@ def update_inventory(fg, DEBUG=False):
         return output
 
 
-def update_device(fortigate=None, data={}, logger=logger):
+def update_device(fortigate=None, data={}, logger=logger, job=None):
     """
         To update Device data
     """
@@ -142,16 +149,25 @@ def update_device(fortigate=None, data={}, logger=logger):
                     fortigate.device.snapshot()
             if data['version'] and data['version'] != fortigate.fortios_version:
                 changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
-                logger.info(f'Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
+                msg = f'Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"'
+                if job:
+                    job.logger.info(msg)
+                logger.info(msg)
                 fortigate.fortios_version = data['version']
             if data['vdom'] and data['vdom'] != fortigate.default_vdom:
                 changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"')
-                logger.info(f' Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"')
+                msg = f'Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"'
+                if job:
+                    job.logger.info(msg)
+                logger.info(msg)
                 fortigate.default_vdom = data['vdom']
             if data['hostname']:
                 hname = f"{data['hostname']} - {data['vdom']}" if data['vdom'] != 'root' else data['hostname']
                 if hname != hostname and get_plugin_default('SYNC_HOSTNAME', True):
-                    logger.info(f' Changing hostname from "{hostname}" to "{hname}"')
+                    msg = f'Changing hostname from "{hostname}" to "{hname}"'
+                    if job:
+                        job.logger.info(msg)
+                    logger.info(msg)
                     fortigate.device.name = hname
                     fortigate.device.save()
             if changes:

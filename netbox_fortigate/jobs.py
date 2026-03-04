@@ -153,14 +153,14 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
 
             # IMPORTANT: do not rewrite update_inventory here; just call it
             # Expected return: [ok(bool), state_or_error(str), items(list)]
-            result = update_inventory(fg, DEBUG=DEBUG)
+            result = update_inventory(fg, DEBUG=DEBUG, job=self)
             return id, result
 
         results_by_id = {}
 
         if max_workers <= 1 or len(devices) <= 1:
             for fg in devices:
-                id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG)
+                id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG, job=self)
                 results_by_id[id] = result
         else:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
