@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.core.exceptions import ValidationError
-from django.db import close_old_connections
+from django.db import close_old_connections 
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
@@ -180,7 +180,8 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         def worker(id: int):
             close_old_connections()
             fg = Fortigate.objects.get(pk=id)
-            current_request.set(req)
+            if get_plugin_default("enable_logging", False):
+                current_request.set(req)
             # IMPORTANT: do not rewrite update_inventory here; just call it
             # Expected return: [ok(bool), state_or_error(str), items(list)]
             result = update_inventory(fg, DEBUG=DEBUG, job=self)
@@ -190,7 +191,8 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
 
         if max_workers <= 1 or len(devices) <= 1:
             for fg in devices:
-                current_request.set(req)
+                if get_plugin_default("enable_logging", False):
+                    current_request.set(req)
                 id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG, job=self)
                 results_by_id[id] = result
         else:
