@@ -1,4 +1,6 @@
 from __future__ import annotations
+import uuid
+import contextvars
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -8,13 +10,23 @@ from django.core.exceptions import ValidationError
 from django.db import close_old_connections
 from django.utils import timezone
 
+
+from netbox.context import current_request, events_queue
 from netbox.jobs import JobRunner
+from users.models import User
 from .utils.settings import get_plugin_default
 from .utils.inventory import update_inventory
 
 from .models import Scheduler, Fortigate
 from .choices import ScheduleFrequencyChoices, ScheduleModeChoices
 
+
+
+
+@dataclass
+class _JobRequest:
+    id: object
+    user: object
 
 # =========================
 # CRON COMPUTATION
@@ -126,10 +138,13 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         name = "Inventory Pull"
 
     def run(self, schedule_id=None, fortigate_id=None, data=None, *args, **kwargs):
+        user = User.objects.filter(username='system').first()
+        req = _JobRequest(id=uuid.uuid4(), user=user)
+        current_request.set(req)
+        ctx = contextvars.copy_context()
         # ensure metadata exists before we write started_at/finished_at
         self.seed_job_data(data=data)
 
-        # ✅ never write self.job.data directly
         self.update_job_data(started_at=timezone.now().isoformat())
 
         DEBUG = get_plugin_default("DEBUG", False)
@@ -164,7 +179,7 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
                 results_by_id[id] = result
         else:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [pool.submit(worker, fg.pk) for fg in devices]
+                futures = [pool.submit(ctx.run, worker, fg.pk) for fg in devices]
                 for fut in as_completed(futures):
                     id, result = fut.result()
                     results_by_id[id] = result

@@ -134,8 +134,6 @@ def delete_related_object(sender, instance, **kwargs):
 @receiver(post_save)
 def create_or_update_related_object(sender, instance, **kwargs):
     if sender not in MONITORED_MODELS:
-        if sender == Fortigate:
-            cascade_decommissioned(instance)
         return
     content_type = ContentType.objects.get_for_model(sender)
     obj, created = Object.objects.get_or_create(fortigate=instance.fortigate, object_type=content_type, object_id=instance.pk)
@@ -143,33 +141,3 @@ def create_or_update_related_object(sender, instance, **kwargs):
     if not created:
         obj.save()
 
-
-def cascade_decommissioned(instance, visited=None):
-    if visited is None:
-        visited = set()
-
-        # Prevent circular references
-    if instance in visited:
-        return
-    visited.add(instance)
-
-    for field in instance._meta.get_fields():
-        if field.is_relation and field.auto_created and not field.concrete:
-            related_manager = getattr(instance, field.get_accessor_name(), None)
-            if related_manager:
-                related_objects = related_manager.all()
-                model_name = field.related_model.__name__.lower()
-
-                if related_objects and model_name != "object":
-                    for item in related_objects:
-                        if hasattr(item, 'is_decommissioned'):
-                            if not item.is_decommissioned:
-                                updated_time = timezone.localtime()
-                                item.updated_time = updated_time
-                                change = f"{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing status from Decommissioned to Active"
-                                item.is_decommissioned = True;
-                                item.save()
-
-                # Recurse into related objects
-                for related_object in related_objects:
-                    cascade_decommissioned(related_object, visited)

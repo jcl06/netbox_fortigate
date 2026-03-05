@@ -147,8 +147,8 @@ def update_device(fortigate=None, data={}, logger=logger, job=None):
         if fortigate.default_vdom != 'root' and fortigate.default_vdom not in fortigate.device.name:
             hostname = f"{fortigate.device.name} - {fortigate.default_vdom}"
         if data:
-            if fortigate.pk and hasattr(fortigate.device, 'snapshot'):
-                    fortigate.device.snapshot()
+            if fortigate and hasattr(fortigate, 'snapshot'):
+                    fortigate.snapshot()
             if data['version'] and data['version'] != fortigate.fortios_version:
                 changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
                 msg = f'Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"'
@@ -170,6 +170,8 @@ def update_device(fortigate=None, data={}, logger=logger, job=None):
                     if job:
                         job.logger.info(msg)
                     logger.info(msg)
+                    if hasattr(fortigate.device, 'snapshot'):
+                        fortigate.device.snapshot()
                     fortigate.device.name = hname
                     fortigate.device.save()
             if changes:
