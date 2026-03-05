@@ -551,7 +551,7 @@ def get_objects_values(objects, to_str=False, model='Object'):
 
 
 def get_address_values(obj):
-    if obj.type == 'ipmask':
+    if obj.type in ['ipmask', 'interface-subnet']:
         return 'ALL' if str(obj.subnet) == '0.0.0.0/0' else str(obj.subnet)
     elif obj.type == 'iprange':
         return f'{obj.start_ip}-{obj.end_ip}'
