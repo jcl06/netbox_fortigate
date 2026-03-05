@@ -1,7 +1,7 @@
 from __future__ import annotations
 import uuid
-import contextvars
 
+from concurrent.futures import TimeoutError
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -165,6 +165,9 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
 
         DEBUG = get_plugin_default("DEBUG", False)
         max_workers = get_plugin_default("inventory_max_workers", 10)
+        # Keep these BELOW your RQ default timeout (likely 300s)
+        per_device_timeout = get_plugin_default("inventory_device_timeout", 60)   # seconds
+        overall_timeout = get_plugin_default("inventory_overall_timeout", 240)    # seconds
 
         if fortigate_id:
             devices = list(Fortigate.objects.filter(pk=fortigate_id))
@@ -192,14 +195,31 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         if max_workers <= 1 or len(devices) <= 1:
             for fg in devices:
                 current_request.set(req)
-                id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG, job=self)
-                results_by_id[id] = result
+                events_queue.set({})
+                try:
+                    result = update_inventory(fg, DEBUG=DEBUG, job=self)
+                except Exception as exc:
+                    result = [False, str(exc), []]
+                results_by_id[fg.pk] = result
         else:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [pool.submit(worker, fg.pk) for fg in devices]
-                for fut in as_completed(futures):
-                    id, result = fut.result()
-                    results_by_id[id] = result
+                future_map = {pool.submit(worker, fg.pk): fg.pk for fg in devices}
+
+                try:
+                    for fut in as_completed(future_map, timeout=overall_timeout):
+                        fg_id = future_map[fut]
+                        try:
+                            id, result = fut.result(timeout=per_device_timeout)
+                        except TimeoutError:
+                            id, result = fg_id, [False, "Timeout", []]
+                        results_by_id[id] = result
+
+                except TimeoutError:
+                    # Overall job timeout reached; mark remaining devices as failed
+                    for fut, fg_id in future_map.items():
+                        if fut.done():
+                            continue
+                        results_by_id[fg_id] = [False, "Overall timeout", []]
 
         # ---- process results (ported from process_inventory_results) ----
         for fg in devices:
