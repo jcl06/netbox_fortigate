@@ -6,7 +6,7 @@ from django.views import View
 from django.contrib.contenttypes.models import ContentType
 
 from utilities.views import GetRelatedModelsMixin, ViewTab, register_model_view, ObjectPermissionRequiredMixin
-from netbox.object_actions import AddObject, BulkDelete, BulkEdit, BulkExport, BulkImport, BulkRename
+from netbox.object_actions import AddObject, BulkDelete, BulkEdit, BulkExport, BulkImport, BulkRename, DeleteObject
 from core.models import Job
 from core.tables import JobTable
 from dcim.models import Device
@@ -65,6 +65,7 @@ class InterfacesListView(generic.ObjectListView):
 @register_model_view(Interfaces)
 class InterfacesView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = Interfaces.objects.all()
+    actions = (DeleteObject,)
 
     def get_extra_context(self, request, instance):
         child_interfaces = Interfaces.objects.restrict(request.user, 'view').filter(parent=instance)
@@ -99,6 +100,7 @@ class ZoneListView(generic.ObjectListView):
 @register_model_view(Zone)
 class ZoneView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = Zone.objects.all()
+    actions = (DeleteObject,)
     
     def get_extra_context(self, request, instance):
         interfaces = instance.interface.all()
@@ -151,6 +153,7 @@ class ObjectListView(generic.ObjectListView):
 @register_model_view(Object)
 class ObjectView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = Object.objects.all()
+    actions = (DeleteObject,)
 
     def get_extra_context(self, request, instance):
         return {
@@ -309,6 +312,7 @@ class SchedulerJobsView(generic.ObjectJobsView):
 @register_model_view(Policy)
 class PolicyView(GetRelatedModelsMixin, generic.ObjectView):
     queryset = Policy.objects.all()
+    actions = (DeleteObject,)
 
     def get_extra_context(self, request, instance):
         users = []

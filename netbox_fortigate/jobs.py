@@ -9,11 +9,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from django.core.exceptions import ValidationError
 from django.db import close_old_connections
 from django.utils import timezone
-
+from django.contrib.auth import get_user_model
 
 from netbox.context import current_request, events_queue
 from netbox.jobs import JobRunner
-from users.models import User
 from .utils.settings import get_plugin_default
 from .utils.inventory import update_inventory
 
@@ -21,6 +20,24 @@ from .models import Scheduler, Fortigate
 from .choices import ScheduleFrequencyChoices, ScheduleModeChoices
 
 
+
+User = get_user_model()
+
+SYSTEM_USERNAME = get_plugin_default("SYSTEM_USERNAME", "system")
+
+def _resolve_audit_user(job) -> User:
+    """
+    For manual runs, NetBox attaches job.user.
+    For scheduled runs, job.user is often None -> fall back to an existing 'system' user.
+    """
+    user = getattr(job, "user", None)
+    if user is not None:
+        return user
+
+    system_user = User.objects.filter(username=SYSTEM_USERNAME).first()
+    if system_user is None:
+        system_user = User.objects.create(username=SYSTEM_USERNAME, is_active=False)
+    return system_user
 
 
 @dataclass
@@ -138,10 +155,9 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         name = "Inventory Pull"
 
     def run(self, schedule_id=None, fortigate_id=None, data=None, *args, **kwargs):
-        user = User.objects.filter(username='system').first()
+        user = _resolve_audit_user(self.job)
         req = _JobRequest(id=uuid.uuid4(), user=user)
-        current_request.set(req)
-        ctx = contextvars.copy_context()
+
         # ensure metadata exists before we write started_at/finished_at
         self.seed_job_data(data=data)
 
@@ -165,7 +181,7 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
         def worker(id: int):
             close_old_connections()
             fg = Fortigate.objects.get(pk=id)
-
+            current_request.set(req)
             # IMPORTANT: do not rewrite update_inventory here; just call it
             # Expected return: [ok(bool), state_or_error(str), items(list)]
             result = update_inventory(fg, DEBUG=DEBUG, job=self)
@@ -175,11 +191,12 @@ class InventoryPullRunner(_JobDataMixin, JobRunner):
 
         if max_workers <= 1 or len(devices) <= 1:
             for fg in devices:
+                current_request.set(req)
                 id, result = fg.pk, update_inventory(fg, DEBUG=DEBUG, job=self)
                 results_by_id[id] = result
         else:
             with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [pool.submit(ctx.run, worker, fg.pk) for fg in devices]
+                futures = [pool.submit(worker, fg.pk) for fg in devices]
                 for fut in as_completed(futures):
                     id, result = fut.result()
                     results_by_id[id] = result

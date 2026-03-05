@@ -106,18 +106,18 @@ def update_inventory(fg, DEBUG=False, job=None):
                 d['errors'] = [status[1]]
                 items.append(d)
                 if job:
-                    job.logger.error(status[1])
+                    job.logger.error(f"{hostname}: {status[1]}")
             elif len(status) == 3:
                 state = d['status'] = 'Successful with Errors'
                 d['errors'] = status[2]
                 items.append(d)
                 if job:
-                    job.logger.warning(f"Pulling {category_name} of {hostname} has completed with errors.")
-                    job.logger.warning(f"Errors: {status[2]}")
+                    job.logger.warning(f"{hostname}: Pulling {category_name} of {hostname} has completed with errors.")
+                    job.logger.warning(f"{hostname} - Errors: {status[2]}")
             if state == 'Failed' and status[0]:
                 state = 'Successful'
             if job and status[0]:
-                job.logger.info(f"Pulling {category_name} of {hostname} has successfully completed.")
+                job.logger.info(f"{hostname}: Pulling {category_name} of {hostname} has successfully completed.")
             
         if state ==  'Successful':
             items = [{'device': hostname, 'type': 'All Inventory', 'status': 'All Successful'}]
@@ -151,14 +151,14 @@ def update_device(fortigate=None, data={}, logger=logger, job=None):
                     fortigate.snapshot()
             if data['version'] and data['version'] != fortigate.fortios_version:
                 changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"')
-                msg = f'Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"'
+                msg = f'{fortigate}: Changing OS Version from "{fortigate.fortios_version}" to "{data['version']}"'
                 if job:
                     job.logger.info(msg)
                 logger.info(msg)
                 fortigate.fortios_version = data['version']
             if data['vdom'] and data['vdom'] != fortigate.default_vdom:
                 changes.append(f'{updated_time.strftime('%Y-%b-%d %H:%m')}: Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"')
-                msg = f'Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"'
+                msg = f'{fortigate}: Changing VDOM from "{fortigate.default_vdom}" to "{data['vdom']}"'
                 if job:
                     job.logger.info(msg)
                 logger.info(msg)
@@ -166,15 +166,18 @@ def update_device(fortigate=None, data={}, logger=logger, job=None):
             if data['hostname']:
                 hname = f"{data['hostname']} - {data['vdom']}" if data['vdom'] != 'root' else data['hostname']
                 if hname != hostname and get_plugin_default('SYNC_HOSTNAME', True):
-                    msg = f'Changing hostname from "{hostname}" to "{hname}"'
-                    if job:
-                        job.logger.info(msg)
-                    logger.info(msg)
+                    msg = f'{fortigate}: Changing hostname from "{hostname}" to "{hname}"'
                     if hasattr(fortigate.device, 'snapshot'):
                         fortigate.device.snapshot()
                     fortigate.device.name = hname
+                    if job:
+                        job.logger.info(msg)
+                        fortigate.device._changelog_message = f"Update by Job ID: {job.job.pk}"
+                    logger.info(msg)
                     fortigate.device.save()
             if changes:
+                if job:
+                    fortigate._changelog_message = f"Update by Job ID: {job.job.pk}"
                 fortigate.save()
         output = [True, 'Success']
     except Exception as err:
@@ -255,6 +258,7 @@ def update_routing_table(device=None, data={}, logger=logger):
                     route.priority = item['priority']
                     route.metric = item['metric']
                     route.interface = interface
+                    route._changelog_message = "Inventory updated by job."
                     route.save()
                 if route.id in route_ids:
                     route_ids.remove(route.id)
@@ -409,6 +413,7 @@ def update_object(model, device=None, data={}, logger=logger):
                         if changes:
                             obj.updated_time = updated_time
                         changes.append(str(err))
+                        obj._changelog_message = "Inventory updated by job."
                         obj.save()
                         if getattr(settings,'ENV','DEV') == 'PROD':
                             continue
@@ -457,6 +462,7 @@ def update_object(model, device=None, data={}, logger=logger):
                             logger.info(f'{model.__name__}:{obj.id}: Removed {", ".join([str(o.name) for o in to_remove])} from "{obj_name}" {m2m_field_name}')
             # Save updates
             if changes:
+                obj._changelog_message = "Inventory updated by job."
                 obj.save()
             
             if obj.id in object_ids:
@@ -465,6 +471,7 @@ def update_object(model, device=None, data={}, logger=logger):
         # Decommission leftover objects
         for obj in model.objects.filter(id__in=object_ids, is_decommissioned=False):
             obj.is_decommissioned = True
+            obj._changelog_message = "Inventory updated by job."
             obj.save()
             obj_name = f'ID:{obj.id}' if not obj.name else obj.name
             logger.info(f'{model.__name__}:{obj.id}: Decommissioning "{obj_name}" {model.__name__}')
