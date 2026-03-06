@@ -55,7 +55,7 @@ class FortigateBulkImportView(generic.BulkImportView):
     model_form = forms.FortigateImportForm
     
 
-
+@register_model_view(Interfaces, 'list', path='', detail=False)
 class InterfacesListView(generic.ObjectListView):
     queryset = Interfaces.objects.all()
     table = tables.InterfacesTable
@@ -85,12 +85,13 @@ class InterfacesView(GetRelatedModelsMixin, generic.ObjectView):
 class InterfacesDeleteView(generic.ObjectDeleteView):
     queryset = Interfaces.objects.all()
 
+@register_model_view(Interfaces, "bulk_delete", path="delete", detail=False)
 class InterfacesBulkDeleteView(generic.BulkDeleteView):
     queryset = Interfaces.objects.all()
     filterset = filtersets.InterfacesFilterSet
     table = tables.InterfacesTable
 
-
+@register_model_view(Zone, 'list', path='', detail=False)
 class ZoneListView(generic.ObjectListView):
     queryset = Zone.objects.all()
     table = tables.ZoneTable
@@ -120,11 +121,13 @@ class ZoneView(GetRelatedModelsMixin, generic.ObjectView):
 class ZoneDeleteView(generic.ObjectDeleteView):
     queryset = Zone.objects.all()
 
+@register_model_view(Zone, "bulk_delete", path="delete", detail=False)
 class ZoneBulkDeleteView(generic.BulkDeleteView):
     queryset = Zone.objects.all()
     filterset = filtersets.ZoneFilterSet
     table = tables.ZoneTable
 
+@register_model_view(RoutingTable, 'list', path='', detail=False)
 class RoutingTableListView(generic.ObjectListView):
     queryset = RoutingTable.objects.all()
     table = tables.RoutingTableTable
@@ -136,12 +139,13 @@ class RoutingTableListView(generic.ObjectListView):
 class RoutingTableDeleteView(generic.ObjectDeleteView):
     queryset = RoutingTable.objects.all()
 
-
+@register_model_view(RoutingTable, "bulk_delete", path="delete", detail=False)
 class RoutingTableBulkDeleteView(generic.BulkDeleteView):
     queryset = RoutingTable.objects.all()
     filterset = filtersets.RoutingTableFilterSet
     table = tables.RoutingTableTable
 
+@register_model_view(Object, 'list', path='', detail=False)
 class ObjectListView(generic.ObjectListView):
     queryset = Object.objects.all()
     table = tables.ObjectTable
@@ -165,7 +169,7 @@ class ObjectView(GetRelatedModelsMixin, generic.ObjectView):
 class ObjectDeleteView(generic.ObjectDeleteView):
     queryset = Object.objects.all()
 
-
+@register_model_view(Object, "bulk_delete", path="delete", detail=False)
 class ObjectBulkDeleteView(generic.BulkDeleteView):
     queryset = Object.objects.all()
     filterset = filtersets.ObjectFilterSet
@@ -256,6 +260,7 @@ class FortigatePullInventoryView(ObjectPermissionRequiredMixin, View):
         return redirect(obj.get_absolute_url())
 
 
+@register_model_view(Scheduler, 'list', path='', detail=False)
 class ScheduleListView(generic.ObjectListView):
     queryset = Scheduler.objects.all()
     table = tables.SchedulerTable
@@ -279,7 +284,7 @@ class ScheduleView(GetRelatedModelsMixin, generic.ObjectView):
             "runner_name": runner.Meta.name,
         }
 
-
+@register_model_view(Scheduler, 'add', detail=False)
 @register_model_view(Scheduler, 'edit')
 class ScheduleEditView(generic.ObjectEditView):
     queryset = Scheduler.objects.all()
@@ -289,6 +294,7 @@ class ScheduleEditView(generic.ObjectEditView):
 class ScheduleDeleteView(generic.ObjectDeleteView):
     queryset = Scheduler.objects.all()
 
+@register_model_view(Scheduler, "bulk_delete", path="delete", detail=False)
 class ScheduleBulkDeleteView(generic.BulkDeleteView):
     queryset = Scheduler.objects.all()
     filterset = filtersets.SchedulerFilterSet
@@ -332,6 +338,7 @@ class PolicyView(GetRelatedModelsMixin, generic.ObjectView):
             'users': ", ".join(users),
         }
 
+@register_model_view(Policy, 'list', path='', detail=False)
 class PolicyListView(generic.ObjectListView):
     actions = (BulkExport, BulkDelete)
     queryset = Policy.objects.all()
@@ -343,7 +350,238 @@ class PolicyDeleteView(generic.ObjectDeleteView):
     queryset = Policy.objects.all()
 
 
+@register_model_view(Policy, "bulk_delete", path="delete", detail=False)
 class PolicyBulkDeleteView(generic.BulkDeleteView):
     queryset = Policy.objects.all()
     table = tables.PolicyTable
     filterset = filtersets.PolicyFilterSet
+
+
+
+
+@register_model_view(Address, 'list', path='', detail=False)
+class AddressList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = Address.objects.all()
+    table = tables.AddressTable
+    filterset = filtersets.AddressFilterSet
+    # filterset_form = forms.AddressFilterForm
+
+@register_model_view(Address, "delete")
+class AddressDeleteView(generic.ObjectDeleteView):
+    queryset = Address.objects.all()
+
+@register_model_view(Address, "bulk_delete", path="delete", detail=False)
+class AddressBulkDeleteView(generic.BulkDeleteView):
+    queryset = Address.objects.all()
+    filterset = filtersets.AddressFilterSet
+    table = tables.AddressTable
+
+
+@register_model_view(AddressGroup, 'list', path='', detail=False)
+class AddressGroupList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = AddressGroup.objects.all()
+    table = tables.AddressGroupTable
+    filterset = filtersets.AddressGroupFilterSet
+    # filterset_form = forms.AddressGroupFilterForm
+
+@register_model_view(AddressGroup, "delete")
+class AddressGroupDeleteView(generic.ObjectDeleteView):
+    queryset = AddressGroup.objects.all()
+
+@register_model_view(AddressGroup, "bulk_delete", path="delete", detail=False)
+class AddressGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = AddressGroup.objects.all()
+    filterset = filtersets.AddressGroupFilterSet
+    table = tables.AddressGroupTable
+
+
+@register_model_view(Services, 'list', path='', detail=False)
+class ServicesList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = Services.objects.all()
+    table = tables.ServicesTable
+    filterset = filtersets.ServicesFilterSet
+    # filterset_form = forms.ServicesFilterForm
+
+@register_model_view(Services, "delete")
+class ServicesDeleteView(generic.ObjectDeleteView):
+    queryset = Services.objects.all()
+
+@register_model_view(Services, "bulk_delete", path="delete", detail=False)
+class ServicesBulkDeleteView(generic.BulkDeleteView):
+    queryset = Services.objects.all()
+    filterset = filtersets.ServicesFilterSet
+    table = tables.ServicesTable
+
+
+@register_model_view(ServiceGroup, 'list', path='', detail=False)
+class ServiceGroupList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = ServiceGroup.objects.all()
+    table = tables.ServiceGroupTable
+    filterset = filtersets.ServiceGroupFilterSet
+    # filterset_form = forms.ServiceGroupFilterForm
+
+@register_model_view(ServiceGroup, "delete")
+class ServiceGroupDeleteView(generic.ObjectDeleteView):
+    queryset = ServiceGroup.objects.all()
+
+@register_model_view(ServiceGroup, "bulk_delete", path="delete", detail=False)
+class ServiceGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = ServiceGroup.objects.all()
+    filterset = filtersets.ServiceGroupFilterSet
+    table = tables.ServiceGroupTable
+
+
+@register_model_view(VIP, 'list', path='', detail=False)
+class VIPList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = VIP.objects.all()
+    table = tables.VIPTable
+    filterset = filtersets.VIPFilterSet
+    # filterset_form = forms.VIPFilterForm
+
+@register_model_view(VIP, "delete")
+class VIPDeleteView(generic.ObjectDeleteView):
+    queryset = VIP.objects.all()
+
+@register_model_view(VIP, "bulk_delete", path="delete", detail=False)
+class VIPBulkDeleteView(generic.BulkDeleteView):
+    queryset = VIP.objects.all()
+    filterset = filtersets.VIPFilterSet
+    table = tables.VIPTable
+
+
+@register_model_view(VIPGroup, 'list', path='', detail=False)
+class VIPGroupList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = VIPGroup.objects.all()
+    table = tables.VIPGroupTable
+    filterset = filtersets.VIPGroupFilterSet
+    # filterset_form = forms.VIPGroupFilterForm
+
+@register_model_view(VIPGroup, "delete")
+class VIPGroupDeleteView(generic.ObjectDeleteView):
+    queryset = VIPGroup.objects.all()
+
+@register_model_view(VIPGroup, "bulk_delete", path="delete", detail=False)
+class VIPGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = VIPGroup.objects.all()
+    filterset = filtersets.VIPGroupFilterSet
+    table = tables.VIPGroupTable
+
+
+@register_model_view(ScheduleOnetime, 'list', path='', detail=False)
+class ScheduleOnetimeList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = ScheduleOnetime.objects.all()
+    table = tables.ScheduleOnetimeTable
+    filterset = filtersets.ScheduleOnetimeFilterSet
+    # filterset_form = forms.ScheduleOnetimeFilterForm
+
+@register_model_view(ScheduleOnetime, "delete")
+class ScheduleOnetimeDeleteView(generic.ObjectDeleteView):
+    queryset = ScheduleOnetime.objects.all()
+
+@register_model_view(ScheduleOnetime, "bulk_delete", path="delete", detail=False)
+class ScheduleOnetimeBulkDeleteView(generic.BulkDeleteView):
+    queryset = ScheduleOnetime.objects.all()
+    filterset = filtersets.ScheduleOnetimeFilterSet
+    table = tables.ScheduleOnetimeTable
+
+
+@register_model_view(ScheduleRecurring, 'list', path='', detail=False)
+class ScheduleRecurringList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = ScheduleRecurring.objects.all()
+    table = tables.ScheduleRecurringTable
+    filterset = filtersets.ScheduleRecurringFilterSet
+    # filterset_form = forms.ScheduleRecurringFilterForm
+
+@register_model_view(ScheduleRecurring, "delete")
+class ScheduleRecurringDeleteView(generic.ObjectDeleteView):
+    queryset = ScheduleRecurring.objects.all()
+
+@register_model_view(ScheduleRecurring, "bulk_delete", path="delete", detail=False)
+class ScheduleRecurringBulkDeleteView(generic.BulkDeleteView):
+    queryset = ScheduleRecurring.objects.all()
+    filterset = filtersets.ScheduleRecurringFilterSet
+    table = tables.ScheduleRecurringTable
+    
+
+@register_model_view(ScheduleGroup, 'list', path='', detail=False)
+class ScheduleGroupList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = ScheduleGroup.objects.all()
+    table = tables.ScheduleGroupTable
+    filterset = filtersets.ScheduleGroupFilterSet
+    # filterset_form = forms.ScheduleGroupFilterForm
+
+@register_model_view(ScheduleGroup, "delete")
+class ScheduleGroupDeleteView(generic.ObjectDeleteView):
+    queryset = ScheduleGroup.objects.all()
+
+@register_model_view(ScheduleGroup, "bulk_delete", path="delete", detail=False)
+class ScheduleGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = ScheduleGroup.objects.all()
+    filterset = filtersets.ScheduleGroupFilterSet
+    table = tables.ScheduleGroupTable
+
+
+@register_model_view(User, 'list', path='', detail=False)
+class UserList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = User.objects.all()
+    table = tables.UserTable
+    filterset = filtersets.UserFilterSet
+    # filterset_form = forms.UserFilterForm
+
+@register_model_view(User, "delete")
+class UserDeleteView(generic.ObjectDeleteView):
+    queryset = User.objects.all()
+
+@register_model_view(User, "bulk_delete", path="delete", detail=False)
+class UserBulkDeleteView(generic.BulkDeleteView):
+    queryset = User.objects.all()
+    filterset = filtersets.UserFilterSet
+    table = tables.UserTable
+
+
+@register_model_view(AuthenticationServer, 'list', path='', detail=False)
+class AuthenticationServerList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = AuthenticationServer.objects.all()
+    table = tables.AuthenticationServerTable
+    filterset = filtersets.AuthenticationServerFilterSet
+    # filterset_form = forms.AuthenticationServerFilterForm
+
+@register_model_view(AuthenticationServer, "delete")
+class AuthenticationServerDeleteView(generic.ObjectDeleteView):
+    queryset = AuthenticationServer.objects.all()
+
+@register_model_view(AuthenticationServer, "bulk_delete", path="delete", detail=False)
+class AuthenticationServerBulkDeleteView(generic.BulkDeleteView):
+    queryset = AuthenticationServer.objects.all()
+    filterset = filtersets.AuthenticationServerFilterSet
+    table = tables.AuthenticationServerTable
+
+
+@register_model_view(UserGroup, 'list', path='', detail=False)
+class UserGroupList(generic.ObjectListView):
+    actions = (BulkExport, BulkDelete)
+    queryset = UserGroup.objects.all()
+    table = tables.UserGroupTable
+    filterset = filtersets.UserGroupFilterSet
+    # filterset_form = forms.UserGroupFilterForm
+
+@register_model_view(UserGroup, "delete")
+class UserGroupDeleteView(generic.ObjectDeleteView):
+    queryset = UserGroup.objects.all()
+
+@register_model_view(UserGroup, "bulk_delete", path="delete", detail=False)
+class UserGroupBulkDeleteView(generic.BulkDeleteView):
+    queryset = UserGroup.objects.all()
+    filterset = filtersets.UserGroupFilterSet
+    table = tables.UserGroupTable

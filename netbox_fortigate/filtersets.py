@@ -149,7 +149,113 @@ class SchedulerFilterSet(NetBoxModelFilterSet):
         )
 
 
+class AddressFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    type = django_filters.CharFilter(field_name="type")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
 
+    class Meta:
+        model = Address
+        fields = ("q", "fortigate_id", "type", "is_decommissioned")
+
+
+class AddressGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    type = django_filters.CharFilter(field_name="type")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = AddressGroup
+        fields = ("q", "fortigate_id", "type", "is_decommissioned")
+
+
+class ServicesFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    protocol = django_filters.CharFilter(field_name="protocol")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = Services
+        fields = ("q", "fortigate_id", "protocol", "is_decommissioned")
+
+
+class ServiceGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = ServiceGroup
+        fields = ("q", "fortigate_id", "is_decommissioned")
+
+
+class VIPFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    type = django_filters.CharFilter(field_name="type")
+    status = django_filters.CharFilter(field_name="status")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = VIP
+        fields = ("q", "fortigate_id", "type", "status", "is_decommissioned")
+
+
+class VIPGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    interface = django_filters.CharFilter(field_name="interface")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = VIPGroup
+        fields = ("q", "fortigate_id", "interface", "is_decommissioned")
+
+
+class ScheduleOnetimeFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = ScheduleOnetime
+        fields = ("q", "fortigate_id", "is_decommissioned")
+
+
+class ScheduleRecurringFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    day = django_filters.CharFilter(field_name="day")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = ScheduleRecurring
+        fields = ("q", "fortigate_id", "day", "is_decommissioned")
+
+
+class ScheduleGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = ScheduleGroup
+        fields = ("q", "fortigate_id", "is_decommissioned")
+
+
+class UserFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    type = django_filters.CharFilter(field_name="type")
+    status = django_filters.CharFilter(field_name="status")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = User
+        fields = ("q", "fortigate_id", "type", "status", "is_decommissioned")
+
+
+class AuthenticationServerFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    type = django_filters.CharFilter(field_name="type")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = AuthenticationServer
+        fields = ("q", "fortigate_id", "type", "is_decommissioned")
 
 
 
@@ -270,3 +376,23 @@ class PolicyFilterSet(NetBoxModelFilterSet):
             Q(source_interface__object_type=ct, source_interface__object_id__in=ids) |
             Q(destination_interface__object_type=ct, destination_interface__object_id__in=ids) 
         ).distinct()
+
+
+
+
+class ProfileGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = ProfileGroup
+        fields = ("q", "fortigate_id", "is_decommissioned")
+
+
+class UserGroupFilterSet(NetBoxModelFilterSet):
+    fortigate_id = django_filters.NumberFilter(field_name="fortigate_id")
+    is_decommissioned = django_filters.BooleanFilter(field_name="is_decommissioned")
+
+    class Meta:
+        model = UserGroup
+        fields = ("q", "fortigate_id", "is_decommissioned")

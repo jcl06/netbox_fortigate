@@ -10,6 +10,8 @@ from ..utils.policy_lookups import get_objects_values
 
 __all__ = (
     'PolicyTable',
+    'UserGroupTable',
+    'ProfileGroupTable'
 )
 
 
@@ -81,3 +83,33 @@ class PolicyTable(NetBoxTable):
             users.extend(get_objects_values(record.groups.all(), False, "UserGroup"))
         return ", ".join(users)
 
+
+
+class ProfileGroupTable(NetBoxTable):
+    fortigate = tables.Column(linkify=True)
+    is_decommissioned = tables.BooleanColumn()
+    actions = columns.ActionsColumn(
+        actions=('delete',) 
+    )
+
+    class Meta(NetBoxTable.Meta):
+        model = ProfileGroup
+        fields = ("pk", "id", "name", "fortigate", "is_decommissioned", "actions")
+        default_columns = ("name", "fortigate")
+
+
+class UserGroupTable(NetBoxTable):
+    fortigate = tables.Column(linkify=True)
+    member_count = tables.Column(empty_values=(), orderable=False, verbose_name="Members")
+    is_decommissioned = tables.BooleanColumn()
+    actions = columns.ActionsColumn(
+        actions=('delete',) 
+    )
+
+    class Meta(NetBoxTable.Meta):
+        model = UserGroup
+        fields = ("pk", "id", "name", "fortigate", "member_count", "is_decommissioned", "actions")
+        default_columns = ("name", "fortigate", "member_count")
+
+    def render_member_count(self, record):
+        return record.member.count()
