@@ -458,7 +458,7 @@ class NetworkPathResolver:
             routes = self._find_direct_routes(routes, destination)
             candidate_devices = set([r.fortigate for r in routes])
             if len(candidate_devices) != 1:
-                candidates = queryset.exclude(fortigate__device__role__slug__in=['edge']).order_by('-route', 'distance', 'metric')
+                candidates = queryset.exclude(fortigate__role='edge').order_by('-route', 'distance', 'metric')
                 best_score = (-candidates[0].route.prefixlen, candidates[0].distance, candidates[0].metric)
                 routes = [r for r in candidates if (-r.route.prefixlen, r.distance, r.metric) == best_score]
             candidate_devices = set([r.fortigate for r in routes])
@@ -466,7 +466,7 @@ class NetworkPathResolver:
             if len(candidate_devices) > 1 and connected:
                 candidates = queryset.filter(
                     next_hop__isnull=True
-                ).exclude(fortigate__device__role__slug__in=['edge']).order_by('-route', 'distance', 'metric')
+                ).exclude(fortigate__role='edge').order_by('-route', 'distance', 'metric')
                 routes = self._find_shortest_path(candidates, destination)
 
         return routes
