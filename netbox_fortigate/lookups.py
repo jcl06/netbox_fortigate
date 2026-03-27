@@ -25,15 +25,15 @@ class TCPPortExactOverride(Lookup):
         sql = f"""
             (
                 -- Directly include 'ALL' if it matches criteria
-                public.cmdb_service.name = 'ALL'
-                AND public.cmdb_service.protocol = 'IP'
-                AND public.cmdb_service.protocol_number = 0
-                AND (public.cmdb_service.tcp_portrange IS NULL OR public.cmdb_service.tcp_portrange = '')
+                public.netbox_fortigate_services.name = 'ALL'
+                AND public.netbox_fortigate_services.protocol = 'IP'
+                AND public.netbox_fortigate_services.protocol_number = 0
+                AND (public.netbox_fortigate_services.tcp_portrange IS NULL OR public.netbox_fortigate_services.tcp_portrange = '')
 
                 OR EXISTS (
                     -- Check for individual ports only (skip ranges like "20-21")
                     SELECT 1
-                    FROM unnest(string_to_array(public.cmdb_service.tcp_portrange, ' ')) AS val
+                    FROM unnest(string_to_array(public.netbox_fortigate_services.tcp_portrange, ' ')) AS val
                     WHERE
                         -- Extract the part before ':' (destination port)
                         LENGTH(SPLIT_PART(SPLIT_PART(val, ':', 1), '-', 1)) > 0
@@ -43,7 +43,7 @@ class TCPPortExactOverride(Lookup):
                 OR EXISTS (
                     -- Check for port ranges
                     SELECT 1
-                    FROM unnest(string_to_array(public.cmdb_service.tcp_portrange, ' ')) AS val
+                    FROM unnest(string_to_array(public.netbox_fortigate_services.tcp_portrange, ' ')) AS val
                     WHERE
                         -- Extract the part before ':' (destination port range)
                         LENGTH(SPLIT_PART(SPLIT_PART(val, ':', 1), '-', 1)) > 0
@@ -84,15 +84,15 @@ class UDPPortExactOverride(Lookup):
         sql = f"""
             (
                 -- Directly include 'ALL' if it matches criteria
-                public.cmdb_service.name = 'ALL'
-                AND public.cmdb_service.protocol = 'IP'
-                AND public.cmdb_service.protocol_number = 0
-                AND (public.cmdb_service.udp_portrange IS NULL OR public.cmdb_service.udp_portrange = '')
+                public.netbox_fortigate_services.name = 'ALL'
+                AND public.netbox_fortigate_services.protocol = 'IP'
+                AND public.netbox_fortigate_services.protocol_number = 0
+                AND (public.netbox_fortigate_services.udp_portrange IS NULL OR public.netbox_fortigate_services.udp_portrange = '')
 
                 OR EXISTS (
                     -- Check for individual ports only (skip ranges like "20-21")
                     SELECT 1
-                    FROM unnest(string_to_array(public.cmdb_service.udp_portrange, ' ')) AS val
+                    FROM unnest(string_to_array(public.netbox_fortigate_services.udp_portrange, ' ')) AS val
                     WHERE
                         -- Extract the part before ':' (destination port)
                         LENGTH(SPLIT_PART(SPLIT_PART(val, ':', 1), '-', 1)) > 0
@@ -102,7 +102,7 @@ class UDPPortExactOverride(Lookup):
                 OR EXISTS (
                     -- Check for port ranges
                     SELECT 1
-                    FROM unnest(string_to_array(public.cmdb_service.udp_portrange, ' ')) AS val
+                    FROM unnest(string_to_array(public.netbox_fortigate_services.udp_portrange, ' ')) AS val
                     WHERE
                         -- Extract the part before ':' (destination port range)
                         LENGTH(SPLIT_PART(SPLIT_PART(val, ':', 1), '-', 1)) > 0
