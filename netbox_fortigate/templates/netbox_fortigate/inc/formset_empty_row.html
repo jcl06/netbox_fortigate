@@ -1,0 +1,14 @@
+<tr class="formset-row" data-new-row="true">
+  {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+  {% endfor %}
+
+  <td>{{ form.source }}</td>
+  <td>{{ form.destination }}</td>
+  <td>{{ form.protocol }}</td>
+  <td>{{ form.ports }}</td>
+  <td>{{ form.username }}</td>
+  <td>
+    <button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button>
+  </td>
+</tr>

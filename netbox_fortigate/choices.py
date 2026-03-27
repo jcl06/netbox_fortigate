@@ -34,6 +34,18 @@ CONTENT_TYPE_CHOICES = (
     Q(app_label='netbox_fortigate', model='authenticationserver') 
 )
 
+class RequestTypeChoices(ChoiceSet):
+    LAB_ACCESS = "lab access"
+    CORP_ACCESS = "corp access"
+    INTERNET_ACCESS = "internet access"
+    IP_RESERVATION = "reserve ip"
+
+    CHOICES = (
+        (CORP_ACCESS, _("Corporate Access")),
+        (LAB_ACCESS, _("LAB Access")),
+        (INTERNET_ACCESS, _("Internet Access")),
+        (IP_RESERVATION, _("Reserve IP"))
+    )
 
 class JobTypeChoices(ChoiceSet):
     INVENTORY_PULL = "inventory_pull"

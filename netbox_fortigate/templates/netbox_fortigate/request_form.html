@@ -1,0 +1,247 @@
+{% extends 'generic/_base.html' %}
+{% load i18n %}
+{% load static %}
+{% load form_helpers %}
+
+{% block title %}
+  {% if object.pk %}
+    {% trans "Editing" %} {{ object }}
+  {% else %}
+    {% trans "Add a new request" %}
+  {% endif %}
+{% endblock title %}
+
+
+{% block head %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'netbox_fortigate/tom-select.css' %}">
+{% endblock %}
+
+{% block javascript %}
+  {{ block.super }}
+  <script src="{% static 'netbox_fortigate/tom-select.min.js' %}"></script>
+  <script>
+    function initTomSelect(scope) {
+      if (typeof TomSelect === "undefined") {
+        console.error("TomSelect is not loaded on this page.");
+        return;
+      }
+
+      scope.querySelectorAll("select.tomselect-multi").forEach(function(el) {
+        if (el.tomselect) {
+          el.tomselect.destroy();
+        }
+
+        new TomSelect(el, {
+          create: true,
+          createOnBlur: true,
+          persist: false,
+          maxItems: null,
+          placeholder: el.dataset.placeholder || "",
+          plugins: {
+            remove_button: {
+              title: "Remove this item"
+            }
+          }
+        });
+      });
+    }
+
+    function getPrefix() {
+      const addBtn = document.getElementById("add-row-btn");
+      return addBtn ? addBtn.dataset.prefix : null;
+    }
+
+    function getRowsContainer(prefix) {
+      return document.getElementById(`${prefix}-rows`);
+    }
+
+    function getTotalForms(prefix) {
+      return document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+    }
+
+    function getBaseIndex(prefix) {
+      const rows = Array.from(getRowsContainer(prefix).querySelectorAll("tr.formset-row"));
+      let maxExistingIndex = -1;
+
+      rows.forEach(function(row) {
+        if (row.dataset.newRow === "true") {
+          return;
+        }
+
+        const field = row.querySelector("[name]");
+        if (!field) {
+          return;
+        }
+
+        const match = field.name.match(new RegExp(`^${prefix}-(\\d+)-`));
+        if (match) {
+          maxExistingIndex = Math.max(maxExistingIndex, parseInt(match[1], 10));
+        }
+      });
+
+      return maxExistingIndex + 1;
+    }
+
+    function reindexNewRows(prefix) {
+      const rows = Array.from(getRowsContainer(prefix).querySelectorAll("tr.formset-row"));
+      const newRows = rows.filter(row => row.dataset.newRow === "true");
+
+      let nextIndex = getBaseIndex(prefix);
+
+      newRows.forEach(function(row) {
+        row.querySelectorAll("input, select, textarea, label").forEach(function(el) {
+          ["name", "id", "for"].forEach(function(attr) {
+            const value = el.getAttribute(attr);
+            if (!value) return;
+
+            const updated = value.replace(
+              new RegExp(`${prefix}-(\\d+|__prefix__)`, "g"),
+              `${prefix}-${nextIndex}`
+            );
+            el.setAttribute(attr, updated);
+          });
+        });
+
+        nextIndex += 1;
+      });
+
+      getTotalForms(prefix).value = nextIndex;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      initTomSelect(document);
+
+      const addBtn = document.getElementById("add-row-btn");
+      if (!addBtn) return;
+
+      const prefix = addBtn.dataset.prefix;
+      const totalForms = getTotalForms(prefix);
+      const rowsContainer = getRowsContainer(prefix);
+      const emptyTemplate = document.getElementById(`${prefix}-empty`);
+      const addCountInput = document.getElementById("add-row-count");
+
+      addBtn.addEventListener("click", function() {
+        const count = parseInt(addCountInput.value || "1", 10);
+
+        for (let i = 0; i < count; i++) {
+          const index = parseInt(totalForms.value, 10);
+          const html = emptyTemplate.innerHTML.replace(/__prefix__/g, index);
+
+          rowsContainer.insertAdjacentHTML("beforeend", html);
+
+          const newRow = rowsContainer.lastElementChild;
+          if (newRow) {
+            newRow.dataset.newRow = "true";
+            initTomSelect(newRow);
+          }
+
+          totalForms.value = index + 1;
+        }
+
+        const noRows = document.getElementById("no-rows");
+        if (noRows) {
+          noRows.remove();
+        }
+      });
+    });
+
+    document.addEventListener("click", function(event) {
+      const removeButton = event.target.closest(".remove-row");
+      if (!removeButton) return;
+
+      const row = removeButton.closest("tr.formset-row");
+      if (!row) return;
+
+      const prefix = getPrefix();
+      if (!prefix) return;
+
+      const deleteInput = row.querySelector('input[name$="-DELETE"]');
+      const isNewRow = row.dataset.newRow === "true";
+
+      if (isNewRow) {
+        row.remove();
+        reindexNewRows(prefix);
+
+        const rowsContainer = getRowsContainer(prefix);
+        initTomSelect(rowsContainer);
+
+        const visibleRows = rowsContainer.querySelectorAll("tr.formset-row").length;
+        if (visibleRows === 0) {
+          rowsContainer.insertAdjacentHTML(
+            "beforeend",
+            `<tr id="no-rows">
+              <td colspan="5" class="text-center text-muted">Click "Add" to add rows</td>
+            </tr>`
+          );
+        }
+        return;
+      }
+
+      if (deleteInput) {
+        deleteInput.checked = true;
+        row.style.display = "none";
+      }
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<form action="" method="post" enctype="multipart/form-data" class="form request">
+  {% csrf_token %}
+
+  <div id="form_fields">
+    {% render_form form %}
+  </div>
+
+  <hr>
+
+  {% with formset=formset %}
+    {{ formset.management_form }}
+
+    <h3>{{ formset_context_name|default:"Related Items" }}</h3>
+
+    <table class="table table-hover" id="{{ formset.prefix }}-table">
+      <thead>
+        <tr>
+          {% for col in columns %}
+            <th style="width:{{ col.width|default:'auto' }}">{{ col.name }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody id="{{ formset.prefix }}-rows">
+        {% for firewall_form in formset.forms %}
+          {% include "netbox_fortigate/inc/formset_row.html" with form=firewall_form prefix=formset.prefix %}
+        {% empty %}
+          <tr id="no-rows">
+            <td colspan="{{ columns|length }}" class="text-center text-muted">
+              Click "Add" to add rows
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <input type="number" class="form-control" id="add-row-count"
+             value="1" min="1" max="10" style="width:70px;">
+      <button type="button" class="btn btn-outline-primary" id="add-row-btn" data-prefix="{{ formset.prefix }}">
+        <i class="mdi mdi-plus-box-outline"></i> Add
+      </button>
+    </div>
+
+    <template id="{{ formset.prefix }}-empty">
+      {% include "netbox_fortigate/inc/formset_empty_row.html" with form=formset.empty_form prefix=formset.prefix %}
+    </template>
+  {% endwith %}
+
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+    <a href="{{ return_url }}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </div>
+</form>
+
+
+{% endblock content %}
+
+

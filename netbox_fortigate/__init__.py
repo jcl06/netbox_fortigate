@@ -33,5 +33,8 @@ class NetBoxFortigateConfig(PluginConfig):
         from .navigation import update_menu
         update_menu()
 
+        from .lookups import register_lookups
+        register_lookups()
+
         
 config = NetBoxFortigateConfig

@@ -1,0 +1,32 @@
+<tr class="formset-row">
+  {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+  {% endfor %}
+
+  <td>{{ form.source }}</td>
+  <td>{{ form.destination }}</td>
+  <td>{{ form.protocol }}</td>
+  <td>{{ form.ports }}</td>
+  <td>{{ form.username }}</td>
+  <td>
+    <div class="d-none">
+      {{ form.DELETE }}
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-danger remove-row">Remove</button>
+  </td>
+</tr>
+
+{% if form.source.errors or form.destination.errors or form.protocol.errors or form.ports.errors or form.username.errors %}
+<tr>
+  <td colspan="5">
+    <div class="text-danger">
+      {{ form.source.errors }}
+      {{ form.destination.errors }}
+      {{ form.protocol.errors }}
+      {{ form.ports.errors }}
+      {{ form.username.errors }}
+      {{ form.non_field_errors }}
+    </div>
+  </td>
+</tr>
+{% endif %}

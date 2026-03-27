@@ -4,6 +4,7 @@ from utilities.urls import get_model_urls
 from .models import Scheduler
 from . import views
 from .views.check_policy import PolicyView, DrawPathView
+from .views.request import RequestEditView, RequestDetailView
 
 app_name = "netbox_fortigate"
 
@@ -33,8 +34,8 @@ urlpatterns = [
     path('schedules/<int:pk>/', include(get_model_urls('netbox_fortigate', 'scheduler'))),
 
      # --- Addressing ---
-    path("addresses/", include(get_model_urls("netbox_fortigate", "address", detail=False))),
-    path("addresses/<int:pk>/", include(get_model_urls("netbox_fortigate", "address"))),
+    path("address/", include(get_model_urls("netbox_fortigate", "address", detail=False))),
+    path("address/<int:pk>/", include(get_model_urls("netbox_fortigate", "address"))),
 
     path("address-groups/", include(get_model_urls("netbox_fortigate", "addressgroup", detail=False))),
     path("address-groups/<int:pk>/", include(get_model_urls("netbox_fortigate", "addressgroup"))),
@@ -86,7 +87,10 @@ urlpatterns = [
     path("devices/<int:pk>/pull-inventory/", views.FortigatePullInventoryView.as_view(), name="device_pull_inventory",),
     
     # Requests placeholder for now
-    path("requests/", views.requests_placeholder, name="requests"),
+    path("requests/add/", RequestEditView.as_view(), name="request_add"),
+    path("requests/<int:pk>/edit/", RequestEditView.as_view(), name="request_edit"),
+    path("requests/<int:pk>/", RequestDetailView.as_view(), name="request_detail"),
+    
     path('check-policy/', DrawPathView.as_view(), name='check_policy'),
     path('check-policy/<int:fortigate>/<int:pid>/', PolicyView.as_view(), name ='policy_view'),
 ]

@@ -1,0 +1,34 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+{% load render_table from django_tables2 %}
+{% load i18n %}
+{% load buttons %}
+{% load perms %}
+{% load request_params %}
+
+{% block breadcrumbs %}
+  {{ block.super }}
+{% endblock %}
+
+{# ObjectChange does not support the default add/edit/delete controls #}
+{% block control-buttons %}{% endblock %}
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col col-12 col-md-6">
+      <div class="card">
+        <h2 class="card-header">{% trans object.title %}</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">{% trans "Description" %}</th>
+            <td>{{ object.description|placeholder }}</td>
+          </tr>
+        </table>
+      </div>
+    {% include 'inc/panels/tags.html' %}
+    </div>
+    <div class="col col-12 col-md-6">
+      {% include 'inc/panels/related_objects.html' %}
+    </div>
+  </div>
+{% endblock %}
