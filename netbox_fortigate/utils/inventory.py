@@ -217,6 +217,10 @@ def update_routing_table(device=None, data={}, logger=logger):
                         continue
                     elif qs.exists():
                         item['next_hop'] = qs.first().fortigate
+                # Set routes AD to 200 for unknown next_hop
+                if item['next_hop'] is None and len(data[address]) == 1:
+                    if device.role == 'edge' and item['type'] not in ['connect', 'local']:
+                        item['distance'] = 200
                 try:
                     updated_time = timezone.localtime()
                     route = RoutingTable.objects.get(interface=interface, route=address) # need to add gateway
