@@ -22,6 +22,49 @@ __all__ = (
     'update_inventory',
 )
 
+def device_matches_constraints(device, config):
+    """
+    Determine if the device matches the constraints defined in config.
+    - If config is True, we apply globally (True).
+    - If config is False or None, we return False.
+    - If config is a dictionary:
+      - If 'constrains' is not defined in config, we apply globally (True).
+      - If 'constrains' is defined, we require at least one match if there are active constraint lists.
+      - If all constraint lists are empty, we return False.
+    """
+    if config is True:
+        return True
+    if config is False or config is None:
+        return False
+        
+    if not isinstance(config, dict):
+        return False
+        
+    if 'constrains' not in config:
+        return True
+        
+    constrains = config.get('constrains', {}) or {}
+    devices = [d.lower() for d in constrains.get('devices', []) if d]
+    roles = [r.lower() for r in constrains.get('roles', []) if r]
+    tags = [t.lower() for t in constrains.get('tags', []) if t]
+    
+    # If they defined 'constrains' but all lists are empty, it matches nothing.
+    if not devices and not roles and not tags:
+        return False
+        
+    if devices and device.device.name.lower() in devices:
+        return True
+        
+    if roles and device.role.lower() in roles:
+        return True
+        
+    if tags:
+        device_tags = [t.lower() for t in device.device.tags.values_list('slug', flat=True)]
+        if any(tag in device_tags for tag in tags):
+            return True
+            
+    return False
+
 def update_inventory(fg, DEBUG=False, job=None):
     output = [False, 'Unknown']
     module = None
@@ -85,11 +128,35 @@ def update_inventory(fg, DEBUG=False, job=None):
             ('policies', module.get_policies, Policy, update_object)
         ]
         
+        
+        skip_inventory = get_plugin_default('skip_inventory', {}) or {}
+        inventory_config = skip_inventory.get('inventory', {}) or {}
+
         # Loop through and update each category
         BREAK = False
         error_with = ''
         ERROR = ''
         for category_name, fetch_method, model, update_method in categories:
+            # Check if this category is configured to be skipped entirely for this device
+            category_cfg = None
+            for key in [category_name, 'routing_table' if category_name == 'ipv4_routes' else None]:
+                if key and key in inventory_config:
+                    category_cfg = inventory_config[key]
+                    break
+            
+            # Skip the entire category if constraints match and "types" is not specified
+            if category_cfg is not None and 'types' not in (category_cfg if isinstance(category_cfg, dict) else {}):
+                if device_matches_constraints(fg, category_cfg):
+                    msg = f"Skipped category '{category_name}' per configuration constraints."
+                    if job:
+                        job.logger.info(f"{hostname}: {msg}")
+                    logger.info(f"{hostname}: {msg}")
+                    d = {'device': hostname, 'type': category_name, 'status': 'Skipped', 'errors': []}
+                    items.append(d)
+                    if state == 'Failed':
+                        state = 'Successful'
+                    continue
+
             d = {'device': hostname, 'type': category_name, 'status': 'Successful', 'errors': []}
             if not BREAK:
                 status = update_category(category_name, module, fg, fetch_method, update_method, model, logger=logger)
@@ -197,8 +264,25 @@ def update_routing_table(device=None, data={}, logger=logger):
             raise Exception('No device or data provided')
         route_ids = list(RoutingTable.objects.filter(interface__fortigate=device).values_list('id', flat=True))
         errors = []
+        
+        # Determine route types to skip for this device
+        skip_inventory = get_plugin_default('skip_inventory', {}) or {}
+        inventory_config = skip_inventory.get('inventory', {}) or {}
+        category_cfg = None
+        for key in ['ipv4_routes', 'routing_table']:
+            if key in inventory_config:
+                category_cfg = inventory_config[key]
+                break
+        
+        skip_types = set()
+        if category_cfg is not None and isinstance(category_cfg, dict) and 'types' in category_cfg:
+            if device_matches_constraints(device, category_cfg):
+                skip_types = {t.lower() for t in category_cfg.get('types', []) if t}
+
         for address in data:
             for item in data[address]:
+                if item.get('type', '').lower() in skip_types:
+                    continue
                 changes = []
                 item['next_hop'] = None
                 try:
